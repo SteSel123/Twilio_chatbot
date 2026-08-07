@@ -966,7 +966,7 @@
             <div class="panel-card-icon">📄</div>
             <div>
               <h2 data-i18n="setup.docTitle">Intern document (optioneel)</h2>
-              <p class="card-sub" style="margin:0" data-i18n="setup.docSub">Menu, prijslijst of openingstijden — in het voorbeeld zie je hoe dit werkt met 1.000+ documenten.</p>
+              <p class="card-sub" style="margin:0" data-i18n="setup.docSub">Menu, prijslijst of openingstijden — upload optioneel om te zien hoe de assistent je document gebruikt.</p>
             </div>
           </div>
           {% if vision_available %}
@@ -1103,11 +1103,11 @@
         container.appendChild(panel.firstChild);
         renderProgress(data, stepIndex);
         for (let i = 1; i <= files.length; i++) {
-          await sleep(220);
+          await sleep(520);
           panel.innerHTML = buildProcessPanel(data, i < files.length, i);
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-        await sleep(350);
+        await sleep(700);
         panel.innerHTML = buildProcessPanel(data, false, files.length);
         renderProgress(data, stepIndex);
       }
@@ -1120,13 +1120,13 @@
         container.appendChild(webEl.firstChild);
         renderProgress(data, stepIndex);
         for (let i = 1; i <= query.length; i++) {
-          await sleep(18);
+          await sleep(34);
           webEl.innerHTML = buildWebStep(data, true, query.slice(0, i), labels);
         }
-        await sleep(400);
+        await sleep(750);
         webEl.innerHTML = buildWebStep(data, false, query, labels);
         renderProgress(data, stepIndex);
-        await sleep(350);
+        await sleep(600);
       }
 
       function renderProgress(data, stepIndex) {
@@ -1147,7 +1147,7 @@
           el.textContent = step.text || '';
           container.appendChild(el);
           chatMessages.scrollTop = chatMessages.scrollHeight;
-          await sleep(380);
+          await sleep(720);
         } else if (step.type === 'bot') {
           const el = document.createElement('div');
           el.className = 'bubble-bot';
@@ -1159,7 +1159,7 @@
             container.appendChild(tags.firstChild);
           }
           chatMessages.scrollTop = chatMessages.scrollHeight;
-          await sleep(420);
+          await sleep(820);
         } else if (step.type === 'internal_docs') {
           const panelData = Object.assign({}, data, {
             doc_files: step.doc_files || [],
@@ -1174,7 +1174,7 @@
           note.innerHTML = buildInternalNote(step.text || '');
           container.appendChild(note.firstChild);
           chatMessages.scrollTop = chatMessages.scrollHeight;
-          await sleep(380);
+          await sleep(680);
         } else if (step.type === 'web_search') {
           await animateWebStep(container, data, stepIndex, {
             query: step.query,

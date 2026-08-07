@@ -29,7 +29,7 @@
           'We zoeken je bedrijf automatisch op via Google. Optioneel kun je een document uploaden.',
         docTitle: 'Intern document (optioneel)',
         docSub:
-          'Menu, prijslijst of openingstijden — in het voorbeeld zie je hoe dit werkt met 1.000+ documenten.',
+          'Menu, prijslijst of openingstijden — upload optioneel om te zien hoe de assistent je document gebruikt.',
         uploadCta: 'Tik om bestand te kiezen',
         uploadHint: 'JPG, PNG, WebP of PDF · max 8 MB',
         privacy:
@@ -66,7 +66,7 @@
           'We look up your business on Google automatically. Optionally upload a document.',
         docTitle: 'Internal document (optional)',
         docSub:
-          'Menu, price list or hours — the preview shows how this works with 1,000+ documents.',
+          'Menu, price list or hours — optionally upload to see how the assistant uses your document.',
         uploadCta: 'Tap to choose a file',
         uploadHint: 'JPG, PNG, WebP or PDF · max 8 MB',
         privacy:
@@ -103,7 +103,7 @@
           'Nous recherchons votre entreprise sur Google. Vous pouvez aussi téléverser un document.',
         docTitle: 'Document interne (optionnel)',
         docSub:
-          'Menu, tarifs ou horaires — l’aperçu montre comment cela fonctionne avec 1 000+ documents.',
+          'Menu, tarifs ou horaires — téléversez un fichier pour voir comment l’assistant l’utilise.',
         uploadCta: 'Appuyez pour choisir un fichier',
         uploadHint: 'JPG, PNG, WebP ou PDF · max 8 Mo',
         privacy:
@@ -140,7 +140,7 @@
           'Buscamos tu negocio en Google automáticamente. Opcionalmente sube un documento.',
         docTitle: 'Documento interno (opcional)',
         docSub:
-          'Menú, lista de precios u horarios — la vista previa muestra cómo funciona con 1.000+ documentos.',
+          'Menú, lista de precios u horarios — sube un archivo para ver cómo lo usa el asistente.',
         uploadCta: 'Toca para elegir archivo',
         uploadHint: 'JPG, PNG, WebP o PDF · máx 8 MB',
         privacy:
@@ -177,7 +177,7 @@
           'Cerchiamo la tua attività su Google. Puoi anche caricare un documento.',
         docTitle: 'Documento interno (opzionale)',
         docSub:
-          'Menu, listino o orari — l’anteprima mostra come funziona con 1.000+ documenti.',
+          'Menu, listino o orari — carica un file per vedere come l’assistente lo usa.',
         uploadCta: 'Tocca per scegliere un file',
         uploadHint: 'JPG, PNG, WebP o PDF · max 8 MB',
         privacy:
@@ -214,7 +214,7 @@
           'Wir suchen Ihr Unternehmen automatisch bei Google. Optional können Sie ein Dokument hochladen.',
         docTitle: 'Internes Dokument (optional)',
         docSub:
-          'Menü, Preisliste oder Öffnungszeiten — die Vorschau zeigt, wie es mit 1.000+ Dokumenten funktioniert.',
+          'Menü, Preisliste oder Öffnungszeiten — optional hochladen, um zu sehen, wie der Assistent Ihr Dokument nutzt.',
         uploadCta: 'Tippen, um Datei zu wählen',
         uploadHint: 'JPG, PNG, WebP oder PDF · max 8 MB',
         privacy:

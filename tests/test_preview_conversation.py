@@ -38,17 +38,15 @@ def test_upload_conversation_follow_up():
     result = {
         "sample_question": "Wat kost pasta carbonara?",
         "sample_answer": "Pasta carbonara kost €14,50.",
-        "doc_files": ["menu.jpg", "Kennisbank — 1.024 documenten"],
-        "doc_found_message": "Direct antwoord uit je documenten — alsof je 1.000+ bestanden had geüpload.",
+        "doc_found_message": "Antwoord gevonden in je geüpload document.",
         "response_tags": ["Prijs bevestigd"],
     }
     steps = build_upload_conversation(result, industry="restaurant", business_name="De Hoge Muur")
-    assert steps[0]["type"] == "internal_note"
-    assert "1.000" in steps[0]["text"]
-    assert steps[1]["type"] == "internal_docs"
-    assert steps[2]["type"] == "customer"
+    assert steps[0]["type"] == "customer"
+    assert steps[1]["type"] == "internal_note"
+    assert "geüpload document" in steps[1]["text"].lower()
+    assert not any(s["type"] == "internal_docs" for s in steps)
     assert any(s["type"] == "customer" and "reserveren" in s["text"].lower() for s in steps)
-    assert any(s["type"] == "internal_note" and "1.000" in s["text"] for s in steps)
     assert steps[-1]["type"] == "bot"
     assert "tot vanavond" in steps[-1]["text"].lower() or "graag" in steps[-1]["text"].lower()
 

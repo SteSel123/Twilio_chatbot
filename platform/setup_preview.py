@@ -1831,25 +1831,14 @@ def _apply_preview_ui(
         result["sector_answer"] = ""
         result["customer_thanks"] = ""
         uploaded_label = source_name or "Intern document.jpg"
-        result["upload_vision_message"] = (
-            "Stel je voor: je hebt nu 1.000+ interne documenten geüpload. "
-            "De bot doorzoekt alles in seconden — en vindt meteen het juiste antwoord."
-        )
-        result["doc_searching"] = "1.024 documenten worden doorzocht…"
-        result["doc_done"] = "Antwoord direct gevonden in je kennisbank"
-        result["doc_found_message"] = (
-            "Direct antwoord uit je documenten — alsof je 1.000+ bestanden had geüpload."
-        )
-        result["doc_note"] = (
-            "Dit voorbeeld gebruikt één foto, maar zo werkt het met je volledige kennisbank."
-        )
+        result["upload_vision_message"] = ""
+        result["doc_searching"] = "Geüpload document wordt gelezen…"
+        result["doc_done"] = "Document gelezen"
+        result["doc_found_message"] = "Antwoord gevonden in je geüpload document."
+        result["doc_note"] = ""
         result["doc_show_lock"] = True
-        result["doc_files"] = [
-            uploaded_label,
-            "Kennisbank — 1.024 documenten",
-            "Menu's, prijslijsten, contracten & meer",
-        ]
-        result["progress_label"] = "1.000+ docs → vraag → direct antwoord"
+        result["doc_files"] = [uploaded_label]
+        result["progress_label"] = "Document → vraag → antwoord"
         result["show_owner_sources"] = False
         result["owner_sources"] = []
     if source in ("demo", "website"):

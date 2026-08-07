@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-UPLOAD_VISION_MESSAGE = (
-    "Stel je voor: je hebt nu 1.000+ interne documenten geüpload. "
-    "De bot doorzoekt alles in seconden — en vindt meteen het juiste antwoord."
-)
-
 
 def _strip_sector_prefix(question: str) -> str:
     """Remove redundant opener when customer already thanked in prior turn."""
@@ -166,24 +161,13 @@ def build_upload_conversation(result: dict, *, industry: str, business_name: str
     if not question.lower().startswith(("hoi", "hey", "hallo")):
         question = f"Hoi! 😊 {question}"
 
-    vision = result.get("upload_vision_message") or UPLOAD_VISION_MESSAGE
-
     return [
-        {"type": "internal_note", "text": vision},
-        {
-            "type": "internal_docs",
-            "doc_files": result.get("doc_files") or [],
-            "doc_searching": result.get("doc_searching", "Document wordt geanalyseerd…"),
-            "doc_done": result.get("doc_done", "Document gelezen"),
-            "doc_note": result.get("doc_note", ""),
-            "doc_show_lock": result.get("doc_show_lock", True),
-        },
         {"type": "customer", "text": question},
         {
             "type": "internal_note",
             "text": result.get(
                 "doc_found_message",
-                "Antwoord direct gevonden in je kennisbank — alsof je 1.000+ documenten had geüpload.",
+                "Antwoord gevonden in je geüpload document.",
             ),
         },
         {"type": "bot", "text": answer, "tags": result.get("response_tags")},
