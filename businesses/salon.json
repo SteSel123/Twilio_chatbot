@@ -1,0 +1,34 @@
+{
+  "business_name": "Bella Hair Studio",
+  "industry": "beauty salon",
+  "tagline": "Your salon assistant — book appointments, check services, and get aftercare tips.",
+  "welcome_message": "Hi! Welcome to Bella Hair Studio.\n\nI can help you book a cut, colour, or treatment, check prices, or answer questions about our services.\n\nWhat would you like today?",
+  "system_prompt_extra": "Services include: haircut, colour, balayage, blow-dry, treatments. Ask for preferred stylist and date/time when booking.",
+  "enabled_tools": [
+    "searchBusinessDocs",
+    "getCustomerContext",
+    "webSearch",
+    "listExternalIntegrations",
+    "callExternalTool",
+    "qualifyLead",
+    "bookAppointment",
+    "listAvailableSlots",
+    "createPaymentLink",
+    "scheduleReminder"
+  ],
+  "docs_subdir": "salon",
+  "language_default": "en",
+  "web_search_hint": "hair salon appointment pricing services",
+  "subscription_tier": "growth",
+  "google_calendar_id": "primary",
+  "review_url": "https://g.page/r/example/review",
+  "external_mcp_servers": [
+    {
+      "label": "booking",
+      "url": "https://booking-vendor.example.com/mcp",
+      "transport": "streamable-http",
+      "description": "Salon appointment booking system",
+      "bearer_token_env": "BOOKING_MCP_TOKEN"
+    }
+  ]
+}

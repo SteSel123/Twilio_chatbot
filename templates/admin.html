@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AppAssist Admin — {{ stats.business }}</title>
+  <style>
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #334155;
+      --text: #f1f5f9; --muted: #94a3b8; --accent: #22c55e; --accent-dim: #166534;
+      --warn: #f59e0b; --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header span { color: var(--muted); font-size: 0.875rem; }
+    .badge { background: var(--accent-dim); color: var(--accent); padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+    .card h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 0.5rem; }
+    .card .value { font-size: 1.75rem; font-weight: 700; }
+    .card .sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+    section { margin-bottom: 2rem; }
+    section h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; }
+    .bar-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .bar-label { width: 120px; font-size: 0.8rem; color: var(--muted); }
+    .bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+    .api-list { font-size: 0.8rem; color: var(--muted); }
+    .api-list code { background: var(--bg); padding: 0.15rem 0.4rem; border-radius: 4px; color: var(--text); }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: 2rem; }
+    a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>AppAssist Admin</h1>
+      <span>{{ stats.business }} · tenant <code>{{ stats.tenant }}</code></span>
+    </div>
+    <span class="badge">{{ stats.tier | upper }} plan</span>
+  </header>
+
+  <main>
+    <div class="grid">
+      <div class="card">
+        <h3>Conversations (30d)</h3>
+        <div class="value">{{ stats.inbound_messages | default(0) }}</div>
+        <div class="sub">{{ stats.monthly_conversations | default(0) }} this month</div>
+      </div>
+      <div class="card">
+        <h3>Avg response</h3>
+        <div class="value">{{ stats.avg_response_sec | default(0) }}s</div>
+        <div class="sub">{{ stats.avg_response_ms | default(0) }} ms</div>
+      </div>
+      <div class="card">
+        <h3>Leads qualified</h3>
+        <div class="value">{{ stats.leads_count | default(0) }}</div>
+        <div class="sub">Avg score {{ stats.leads_avg_score | default(0) }}</div>
+      </div>
+      <div class="card">
+        <h3>Feedback</h3>
+        <div class="value">👍 {{ stats.get('positive_feedback', '—') }}</div>
+        <div class="sub">👎 {{ stats.get('negative_feedback', '—') }}</div>
+      </div>
+    </div>
+
+    <section>
+      <h2>Top intents</h2>
+      <div class="card">
+        {% for item in stats.get('top_intents', []) %}
+        <div class="bar-row">
+          <span class="bar-label">{{ item.intent }}</span>
+          <div class="bar-track"><div class="bar-fill" style="width: {{ (item.count / (stats.inbound_messages or 1) * 100) | int }}%"></div></div>
+          <span>{{ item.count }}</span>
+        </div>
+        {% else %}
+        <p style="color: var(--muted); font-size: 0.875rem;">No intent data yet — conversations will appear here.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <h2>Hot leads</h2>
+      <div class="card">
+        <table>
+          <thead><tr><th>User</th><th>Interest</th><th>Urgency</th><th>Score</th></tr></thead>
+          <tbody>
+            {% for lead in stats.get('hot_leads', [])[:10] %}
+            <tr>
+              <td><code>{{ lead.user_id[-12:] }}</code></td>
+              <td>{{ lead.interest }}</td>
+              <td>{{ lead.urgency }}</td>
+              <td><strong>{{ lead.score }}</strong></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="color: var(--muted);">No leads yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Plan limits</h2>
+      <div class="card api-list">
+        <p>Conversations/month: <strong>{{ stats.tier_limits.conversations_per_month or 'Unlimited' }}</strong></p>
+        <p>Phone numbers: <strong>{{ stats.tier_limits.phone_numbers }}</strong></p>
+        <p>Voice &amp; images: <strong>{{ 'Yes' if stats.tier_limits.voice_images else 'Upgrade to Growth' }}</strong></p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Admin API</h2>
+      <div class="card api-list">
+        <p><code>GET /admin/analytics?tenant_id={{ stats.tenant }}</code> — JSON metrics</p>
+        <p><code>GET/PUT /admin/business/{{ stats.tenant }}</code> — Profile CRUD</p>
+        <p><code>POST /admin/docs/upload</code> — Upload knowledge base files</p>
+        <p><code>GET/POST /admin/outbound</code> — Proactive reminders &amp; payment links</p>
+        <p><code>POST /billing/checkout</code> — Stripe subscription</p>
+        <p>MCP tools: <code>python -m mcp_server --transport streamable-http</code></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    AppAssist · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/health/ready">System health</a>
+    · <form method="post" action="/admin/logout" style="display:inline"><button type="submit" style="background:none;border:none;color:#22c55e;cursor:pointer;font-size:inherit">Logout</button></form>
+  </footer>
+</body>
+</html>

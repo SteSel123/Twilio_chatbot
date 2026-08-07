@@ -1,0 +1,11 @@
+{
+  "business_name": "Your Business",
+  "industry": "general",
+  "tagline": "Your friendly WhatsApp assistant — here to help with bookings, questions, and support.",
+  "welcome_message": "Hi! Welcome to our business.\n\nI can help with bookings, pricing, opening hours, and common questions.\n\nWhat can I help you with today?",
+  "system_prompt_extra": "",
+  "enabled_tools": ["searchBusinessDocs", "getCustomerContext", "webSearch"],
+  "docs_subdir": "default",
+  "language_default": "en",
+  "web_search_hint": "small business services pricing hours"
+}

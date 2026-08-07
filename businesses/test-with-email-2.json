@@ -1,0 +1,24 @@
+{
+  "business_name": "Test With Email",
+  "business_city": "Amsterdam",
+  "specialization": "Hair salon",
+  "industry": "salon",
+  "tagline": "WhatsApp assistant for Test With Email",
+  "welcome_message": "Hi! Welcome to Test With Email.\n\nHow can I help you today — booking, pricing, hours, or a question?",
+  "system_prompt_extra": "",
+  "enabled_tools": [
+    "searchBusinessDocs",
+    "getCustomerContext",
+    "webSearch"
+  ],
+  "docs_subdir": "test-with-email-2",
+  "language_default": "en",
+  "handoff_phrase": "speak to human",
+  "web_search_hint": "business services pricing hours location",
+  "external_mcp_servers": [],
+  "subscription_tier": "starter",
+  "twilio_whatsapp_from": "",
+  "google_calendar_id": "primary",
+  "review_url": "",
+  "handoff_slack_webhook": ""
+}

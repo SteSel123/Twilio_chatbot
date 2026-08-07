@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ profile.business_name }} — AppAssist</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 4rem auto; padding: 0 1.5rem; color: #18181b; line-height: 1.6; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .tagline { color: #71717a; margin-bottom: 2rem; }
+    .status { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; font-size: 0.9rem; }
+    code { background: #f4f4f5; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85rem; }
+    footer { margin-top: 3rem; font-size: 0.85rem; color: #71717a; }
+    a { color: #16a34a; }
+  </style>
+</head>
+<body>
+  <h1>{{ profile.business_name }}</h1>
+  <p class="tagline">{{ profile.tagline }}</p>
+  <div class="status">
+    WhatsApp assistant is running · tenant <code>{{ tenant_id }}</code>
+  </div>
+  <p>Webhook endpoint: <code>POST /webhook</code></p>
+  <p>Health check: <code>GET /health/ready</code></p>
+  <footer>
+    <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> ·
+    Admin dashboard: <code>/admin/dashboard</code> (API key required)
+  </footer>
+</body>
+</html>

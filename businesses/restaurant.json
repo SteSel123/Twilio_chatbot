@@ -1,0 +1,11 @@
+{
+  "business_name": "Trattoria Roma",
+  "industry": "restaurant",
+  "tagline": "Your restaurant assistant — reservations, menu, hours, and dietary questions.",
+  "welcome_message": "Hi! Welcome to Trattoria Roma.\n\nI can help with table reservations, menu questions, opening hours, and takeaway orders.\n\nHow can I help?",
+  "system_prompt_extra": "Offer lunch and dinner slots. Ask party size, date, time, and any dietary requirements for reservations.",
+  "enabled_tools": ["searchBusinessDocs", "getCustomerContext", "webSearch"],
+  "docs_subdir": "restaurant",
+  "language_default": "en",
+  "web_search_hint": "restaurant menu reservation hours"
+}
