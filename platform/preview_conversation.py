@@ -40,6 +40,31 @@ def _follow_up_pair(industry: str, business_name: str) -> tuple[str, str]:
             "Interessant! Kunnen jullie volgende week langskomen voor een offerte?",
             "Ja graag! Stuur je adres en telefoonnummer door — dan plannen we een gratis plaatsbezoek in.",
         )
+    if key == "industrial":
+        return (
+            "Oké! Kunnen jullie ook een preventief onderhoudscontract opstellen?",
+            "Zeker — ik stuur je de opties en tarieven door. Welk machinepark gaat het om?",
+        )
+    if key == "construction":
+        return (
+            "Prima! Kunnen we volgende week een intake op locatie inplannen?",
+            "Ja, dat kan! Stuur je adres door — dan stel ik dinsdag of woensdag voor.",
+        )
+    if key == "logistics":
+        return (
+            "Top! Kunnen jullie morgen ook een extra pallet ophalen in Antwerpen?",
+            "Meestal wel — stuur het ophaaladres en gewicht door, dan plan ik de route in.",
+        )
+    if key == "financial":
+        return (
+            "Dank je! Wanneer kan de expert langskomen voor de schade?",
+            "We plannen meestal binnen 5 werkdagen. Ik bevestig de datum zodra het dossier compleet is.",
+        )
+    if key == "property":
+        return (
+            "Bedankt! Is de loodgieter vandaag nog langsgekomen?",
+            "Ja, tussen 15:00–17:00 staat het ingepland. Ik stuur je een bevestiging zodra de monteur onderweg is.",
+        )
     if key == "retail":
         return (
             "Oké! Is dat vandaag nog op voorraad in de winkel?",
@@ -65,6 +90,11 @@ def _customer_interest_after_sector(industry: str) -> str:
         "healthcare": "Oké, ik neem contact op voor een afspraak deze week. 🙏",
         "energy": "Interessant! Ik stuur mijn gegevens door — graag een offerte. 👍",
         "services": "Prima! Ik kom binnenkort langs. 👍",
+        "industrial": "Top! Ik wacht op bevestiging van de monteur. 👍",
+        "construction": "Prima! Tot de intake volgende week. 👍",
+        "logistics": "Oké, ik volg de track & trace. 🙌",
+        "financial": "Dank je, ik stuur de documenten door. 🙏",
+        "property": "Bedankt voor de snelle opvolging! 🙏",
     }.get(industry.lower(), "Klinkt goed! Ik kom binnenkort langs. 👍")
 
 
@@ -76,6 +106,11 @@ def _bot_confirm_after_interest(industry: str) -> str:
         "healthcare": "Prima! We kijken uit naar je berichtje 👋",
         "energy": "Top! We nemen snel contact op voor het plaatsbezoek 👋",
         "services": "Graag gedaan! Tot binnenkort 👋",
+        "industrial": "Graag gedaan! We houden je op de hoogte 👋",
+        "construction": "Top! Tot de intake — we zien je graag 👋",
+        "logistics": "Prima! Je ontvangt zo de track & trace 👋",
+        "financial": "Prima! We nemen je dossier meteen op 👋",
+        "property": "Geregeld! De technieker is ingepland 👋",
     }.get(industry.lower(), "Graag gedaan! Tot binnenkort 👋")
 
 
@@ -87,6 +122,11 @@ def _customer_closing(industry: str) -> str:
         "retail": "Oké, tot morgen! 🙌",
         "healthcare": "Dank je, tot snel! 🙏",
         "energy": "Prima, ik hoor van jullie! 👍",
+        "industrial": "Top, bedankt voor de snelle hulp! 👍",
+        "construction": "Prima, tot volgende week! 👍",
+        "logistics": "Oké, bedankt voor de update! 🙌",
+        "financial": "Dank je, tot snel! 🙏",
+        "property": "Bedankt, fijn geregeld! 🙏",
     }.get(industry.lower(), "Top, bedankt! 👍")
 
 

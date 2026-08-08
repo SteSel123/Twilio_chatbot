@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <rect width="480" height="320" fill="#f4f7fb"/>
+  <rect x="24" y="20" width="432" height="280" rx="8" fill="#fff" stroke="#c5d0de" stroke-width="2"/>
+  <text x="240" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#1e3a5f">Financieel &amp; verzekeringen</text>
+  <text x="48" y="90" font-family="Arial,sans-serif" font-size="12" fill="#444">Schade-expertise  binnen 5 werkdagen</text>
+  <text x="48" y="110" font-family="Arial,sans-serif" font-size="12" fill="#444">Belasting MKB  vanaf ¬650/jaar</text>
+  <text x="48" y="130" font-family="Arial,sans-serif" font-size="12" fill="#444">Juridisch advies  ¬185/u</text>
+</svg>

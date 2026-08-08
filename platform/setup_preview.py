@@ -68,6 +68,11 @@ INDUSTRY_TO_DEMO = {
     "healthcare": "salon-prices",
     "other": "shop-hours",
     "general": "restaurant-menu",
+    "industrial": "industrial-service",
+    "construction": "construction-install",
+    "logistics": "logistics-transport",
+    "financial": "financial-advisory",
+    "property": "property-management",
 }
 
 DEFAULT_WEBSITE_URLS = {
@@ -78,6 +83,11 @@ DEFAULT_WEBSITE_URLS = {
     "healthcare": "/demo-site/salon",
     "other": "/demo-site/retail",
     "general": "/demo-site/restaurant",
+    "industrial": "/demo-site/industrial",
+    "construction": "/demo-site/construction",
+    "logistics": "/demo-site/logistics",
+    "financial": "/demo-site/financial",
+    "property": "/demo-site/property",
 }
 
 WEBSITE_FETCH_HEADERS = {
@@ -116,17 +126,18 @@ def get_demo_site_industry_slug(industry: str) -> str:
         "healthcare": "salon",
         "other": "retail",
         "general": "restaurant",
+        "industrial": "industrial",
+        "construction": "construction",
+        "logistics": "logistics",
+        "financial": "financial",
+        "property": "property",
     }
-    return mapping.get(industry.lower(), "restaurant")
+    return mapping.get(industry.lower(), "retail")
 
 
 def render_demo_site_html(industry: str) -> str:
     slug = get_demo_site_industry_slug(industry)
-    demo_id = {
-        "restaurant": "restaurant-menu",
-        "salon": "salon-prices",
-        "retail": "shop-hours",
-    }[slug]
+    demo_id = INDUSTRY_TO_DEMO.get(industry.lower(), INDUSTRY_TO_DEMO["retail"])
     sample = get_demo_sample(demo_id) or DEMO_SAMPLES[0]
     title = sample["label"]
     body_parts: list[str] = []
@@ -282,6 +293,11 @@ INDUSTRY_LABELS = {
     "healthcare": "zorgverlener",
     "other": "bedrijf",
     "general": "bedrijf",
+    "industrial": "industrie & maintenance",
+    "construction": "bouw & installatie",
+    "logistics": "transport & logistiek",
+    "financial": "financieel & verzekeringen",
+    "property": "vastgoedbeheer",
 }
 
 
@@ -1367,6 +1383,31 @@ def _owner_sources_for_demo(industry: str) -> list[dict[str, str]]:
             {"kind": "document", "name": "Retourbeleid.pdf", "meta": "Voorwaarden & garantie"},
             {"kind": "document", "name": "Assortiment.docx", "meta": "Categorieën & merken"},
         ],
+        "industrial": [
+            {"kind": "document", "name": "Onderhoudstarieven.pdf", "meta": "Storingsdienst €95/u · Preventief vanaf €420"},
+            {"kind": "database", "name": "Machinepark DB", "meta": "Serienummers & onderhoudshistorie"},
+            {"kind": "document", "name": "Storingsprotocol.docx", "meta": "Foutcodes & responstijden"},
+        ],
+        "construction": [
+            {"kind": "document", "name": "Prijslijst_installatie.pdf", "meta": "Warmtepomp €8.500–€11.000 incl. plaatsing"},
+            {"kind": "database", "name": "Planning DB", "meta": "Intakes & montageteams"},
+            {"kind": "document", "name": "Garantievoorwaarden.pdf", "meta": "Installatie & service"},
+        ],
+        "logistics": [
+            {"kind": "database", "name": "Zendingen DB", "meta": "Track & trace · ETA per route"},
+            {"kind": "document", "name": "Transporttarieven.pdf", "meta": "Nationaal vanaf €85 · Express vanaf €195"},
+            {"kind": "document", "name": "SLA_levering.docx", "meta": "Levervensters & koeltransport"},
+        ],
+        "financial": [
+            {"kind": "document", "name": "Dienstenoverzicht.pdf", "meta": "Schade-expertise · Belasting · Juridisch"},
+            {"kind": "database", "name": "Dossiers DB", "meta": "Polisnummers & claimstatus"},
+            {"kind": "document", "name": "Checklist_schade.docx", "meta": "Benodigde documenten per claim"},
+        ],
+        "property": [
+            {"kind": "database", "name": "Meldingen DB", "meta": "Spoed & regulier onderhoud per unit"},
+            {"kind": "document", "name": "Beheerhandboek.pdf", "meta": "Spoed binnen 4 uur · VvE-procedures"},
+            {"kind": "document", "name": "Technische_partners.docx", "meta": "Loodgieters · elektriciens · dakwerkers"},
+        ],
     }
     default = [
         {"kind": "photo", "name": "Bedrijfsinfo.jpg", "meta": "Algemene bedrijfsgegevens"},
@@ -1381,6 +1422,11 @@ def _doc_files_for_industry(industry: str) -> list[str]:
         "restaurant": ["Menu_2026.pdf", "Allergenenlijst.pdf", "Openingstijden.pdf"],
         "salon": ["Prijslijst_2026.pdf", "Behandelingen.pdf", "Openingstijden.pdf"],
         "retail": ["Winkelinfo.pdf", "Diensten.pdf", "Openingstijden.pdf"],
+        "industrial": ["Onderhoudstarieven.pdf", "Storingsprotocol.pdf", "Machinepark.xlsx"],
+        "construction": ["Prijslijst_installatie.pdf", "Garantievoorwaarden.pdf", "Planning.docx"],
+        "logistics": ["Transporttarieven.pdf", "SLA_levering.pdf", "Track_trace_api.pdf"],
+        "financial": ["Dienstenoverzicht.pdf", "Checklist_schade.pdf", "Tarieven_advies.pdf"],
+        "property": ["Beheerhandboek.pdf", "Meldingen_protocol.pdf", "Technische_partners.pdf"],
     }
     return files.get(industry.lower(), files["retail"])
 
@@ -1541,10 +1587,21 @@ DEFAULT_BUSINESS_LOOKUP = {
     "healthcare": ("Tandartspraktijk Centrum", "Utrecht"),
     "other": ("Bedrijf Centrum", "Utrecht"),
     "general": ("Restaurant De Gouden Lepel", "Utrecht"),
+    "industrial": ("TechServ Industrial", "Rotterdam"),
+    "construction": ("InstallPro BV", "Utrecht"),
+    "logistics": ("FastRoute Logistics", "Antwerpen"),
+    "financial": ("De Vries & Partners", "Amsterdam"),
+    "property": ("WoonBeheer Plus", "Den Haag"),
 }
 
 
 def get_default_business_lookup(industry: str = "general") -> dict[str, str]:
+    from platform.verticals import vertical_default_business
+
+    custom = vertical_default_business(industry)
+    if custom:
+        name, city = custom
+        return {"name": name, "city": city}
     name, city = DEFAULT_BUSINESS_LOOKUP.get(
         industry.lower(), DEFAULT_BUSINESS_LOOKUP["general"]
     )
@@ -1583,6 +1640,36 @@ def _web_search_context(
             "query": f"koopzondag en winkelendrag {loc}",
             "searching": "Sectorinfo voor retail opgezocht…",
             "done": "Actuele sectorinfo toegevoegd",
+            "show": True,
+        },
+        "industrial": {
+            "query": f"industriële onderhoudscontracten trends {loc}",
+            "searching": "Branche-info maintenance opgezocht…",
+            "done": "Sectorinfo toegevoegd",
+            "show": True,
+        },
+        "construction": {
+            "query": f"warmtepomp subsidie en installatietrends {loc}",
+            "searching": "Actuele bouw- en installatieinfo opgezocht…",
+            "done": "Marktinfo toegevoegd",
+            "show": True,
+        },
+        "logistics": {
+            "query": f"leveringsvensters en transportcapaciteit {loc}",
+            "searching": "Logistieke sectorinfo opgezocht…",
+            "done": "Transportinfo toegevoegd",
+            "show": True,
+        },
+        "financial": {
+            "query": f"verzekerings- en fiscale updates MKB {loc}",
+            "searching": "Actuele regelgeving opgezocht…",
+            "done": "Compliance-info toegevoegd",
+            "show": True,
+        },
+        "property": {
+            "query": f"vastgoedonderhoud wetgeving huurders {loc}",
+            "searching": "Vastgoed- en huurinfo opgezocht…",
+            "done": "Beheerinfo toegevoegd",
             "show": True,
         },
     }
@@ -2020,6 +2107,101 @@ Vr 10:00–18:00 · Za 10:00–17:00 · Zo 12:00–17:00
 
 ## Contact
 Stationsstraat 12, Utrecht · Parkeren 1e uur gratis""",
+    },
+    {
+        "id": "industrial-service",
+        "industry": "industrial",
+        "label": "Industriële service",
+        "icon": "⚙️",
+        "description": "Onderhoudstarieven & storingsdienst",
+        "image_url": "demo/industrial-service.svg",
+        "image_caption": "Onderhoudstarieven — storingsdienst €95/u, preventief vanaf €420",
+        "knowledge": """## Onderhoudstarieven
+- Storingsdienst (werkdag) — €95/u excl. onderdelen
+- Preventief onderhoud CNC — vanaf €420 per beurt
+- Noodinterventie 24/7 — €145/u
+
+## Responstijden
+Werkdagen: binnen 4 uur · Weekend: binnen 8 uur
+
+## Contact
+Industrieweg 14, Rotterdam · storingslijn 24/7""",
+    },
+    {
+        "id": "construction-install",
+        "industry": "construction",
+        "label": "Installatie & bouw",
+        "icon": "🏗️",
+        "description": "Warmtepomp & installatieprijzen",
+        "image_url": "demo/construction-install.svg",
+        "image_caption": "Installatieprijzen — warmtepomp €8.500–€11.000 incl. plaatsing",
+        "knowledge": """## Installatieprijzen
+- Warmtepomp lucht-water (5–8 kW) — €8.500–€11.000 incl. plaatsing
+- CV-ketel vervangen — vanaf €2.950
+- Airco split-unit — vanaf €1.450 per binnenunit
+
+## Planning
+Intake binnen 5 werkdagen · Plaatsing binnen 3 weken na akkoord
+
+## Contact
+Installatieweg 8, Utrecht · Ma–Vr 7:30–17:30""",
+    },
+    {
+        "id": "logistics-transport",
+        "industry": "logistics",
+        "label": "Transport & logistiek",
+        "icon": "🚚",
+        "description": "Transporttarieven & levertijden",
+        "image_url": "demo/logistics-transport.svg",
+        "image_caption": "Transport — nationaal vanaf €85, express same-day vanaf €195",
+        "knowledge": """## Transporttarieven
+- Nationaal pallet (tot 800 kg) — vanaf €85
+- Koeltransport — vanaf €120 per pallet
+- Express same-day (BE) — vanaf €195
+
+## Levering
+Ma–Za · Track & trace op elke zending
+
+## Contact
+Logistiekpark 22, Antwerpen · dispatch 24/7""",
+    },
+    {
+        "id": "financial-advisory",
+        "industry": "financial",
+        "label": "Financieel & verzekeringen",
+        "icon": "📋",
+        "description": "Schade, belasting & juridisch advies",
+        "image_url": "demo/financial-advisory.svg",
+        "image_caption": "Diensten — schade-expertise, belastingaangifte vanaf €650",
+        "knowledge": """## Dienstverlening
+- Schade-expertise — binnen 5 werkdagen
+- Belastingaangifte MKB — vanaf €650 per jaar
+- Juridisch advies arbeidsrecht — €185/u
+
+## Documenten
+Polis, schadeformulier, facturen en foto's via WhatsApp
+
+## Contact
+Keizersgracht 120, Amsterdam · Ma–Vr 9:00–18:00""",
+    },
+    {
+        "id": "property-management",
+        "industry": "property",
+        "label": "Vastgoedbeheer",
+        "icon": "🏢",
+        "description": "Meldingen & technisch beheer",
+        "image_url": "demo/property-management.svg",
+        "image_caption": "Beheer — spoed binnen 4 u, VvE-coördinatie",
+        "knowledge": """## Meldingen
+- Spoed onderhoud — binnen 4 uur
+- Regulier onderhoud — binnen 3 werkdagen
+- Huurdersportaal via WhatsApp
+
+## Diensten
+Technisch beheer · Servicekosten · VvE-coördinatie
+
+## Contact
+Beheerstraat 5, Den Haag · storingslijn 24/7""",
     },
 ]
 

@@ -108,6 +108,20 @@ def setup_url(tenant_id: str, token: str) -> str:
 def infer_industry_from_specialization(specialization: str) -> str:
     """Map free-text specialization to internal industry slug for demo/web search."""
     s = specialization.lower()
+
+    energy_words = [
+        "zonnepanel", "solar", "energie", "warmtepomp", "elektricien", "installateur",
+        "pv", "thuisbatterij", "laadpaal", "hvac", "airco", "verwarming",
+    ]
+    if any(w in s for w in energy_words):
+        return "energy"
+
+    from platform.verticals import infer_vertical_from_specialization
+
+    vertical = infer_vertical_from_specialization(specialization)
+    if vertical:
+        return vertical
+
     keywords = {
         "restaurant": [
             "restaurant", "café", "cafe", "eetcafe", "bistro", "pizzeria", "horeca",

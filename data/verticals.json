@@ -1,0 +1,82 @@
+{
+  "industrial": {
+    "label": "industrie & technische maintenance",
+    "demo_id": "industrial-service",
+    "default_business": ["TechServ Industrial", "Rotterdam"],
+    "sample_question": "Hoi! Onze CNC-freesmachine geeft foutcode E47 — kunnen jullie morgen een storingsmonteur sturen?",
+    "sample_answer": "Ja, storingsdienst kan morgen tussen 08:00–12:00 langskomen. Stuur het serienummer en een foto van het display door — dan neemt onze monteur de juiste onderdelen mee.",
+    "upload_knowledge": "## Onderhoudstarieven\n- Storingsdienst (werkdag) — €95/u excl. onderdelen\n- Preventief onderhoud CNC — vanaf €420 per beurt\n- Noodinterventie 24/7 — €145/u\n\n## Responstijden\nWerkdagen: binnen 4 uur · Weekend: binnen 8 uur\n\n## Contact\nIndustrieweg 14, Rotterdam · storingslijn 24/7",
+    "keywords": [
+      "machinefabriek", "metaalindustrie", "kunststof", "chemische productie", "voedingsmiddelenproductie",
+      "farmaceutisch", "elektronica", "automotive", "verpakkingsindustrie", "papierindustrie", "houtindustrie",
+      "textielindustrie", "machinebouw", "productielijn", "verpakkingsmachine", "cnc", "robotica", "transportband",
+      "sorteermachine", "procesinstallatie", "automatisering", "maintenance", "onderhoud", "mechanisch onderhoud",
+      "elektrotechnisch", "instrumentatie", "preventief onderhoud", "predictive maintenance", "storingsdienst",
+      "revisie", "technische inspectie", "machine-service", "industriële installatie", "compressor", "pomp",
+      "generator", "lift", "roltrap", "koelinstallatie", "productiemachine", "field service", "servicemonteur",
+      "installateur", "buitendienst", "reparatiedienst", "onderhoudscontract"
+    ]
+  },
+  "construction": {
+    "label": "bouw, installatie & vastgoed",
+    "demo_id": "construction-install",
+    "default_business": ["InstallPro BV", "Utrecht"],
+    "sample_question": "Hoi! We willen een warmtepomp laten plaatsen in onze rijwoning uit 1998. Kunnen jullie een indicatieve prijs geven?",
+    "sample_answer": "Zeker! Voor een rijwoning rekenen we meestal op €8.500–€11.000 incl. plaatsing, afhankelijk van vermogen en leidingwerk. Zal ik een gratis technische intake inplannen?",
+    "upload_knowledge": "## Installatieprijzen\n- Warmtepomp lucht-water (5–8 kW) — €8.500–€11.000 incl. plaatsing\n- CV-ketel vervangen — vanaf €2.950\n- Airco split-unit — vanaf €1.450 per binnenunit\n\n## Planning\nIntake binnen 5 werkdagen · Plaatsing binnen 3 weken na akkoord\n\n## Contact\nInstallatieweg 8, Utrecht · Ma–Vr 7:30–17:30",
+    "keywords": [
+      "hvac", "verwarming", "ventilatie", "airconditioning", "warmtepomp", "sanitair", "loodgieter", "elektrotechniek",
+      "domotica", "brandmeld", "beveiligingsinstallatie", "zonnepanelen", "laadpaal", "aannemer", "utiliteitsbouw",
+      "woningbouw", "renovatie", "restauratie", "betonbouw", "staalbouw", "dakbouw", "gevelbouw", "timmerbedrijf",
+      "afbouw", "dakdekker", "schilder", "tegelzetter", "metselaar", "isolatie", "kozijn", "glasbedrijf", "vloerbedrijf",
+      "keukeninstallatie", "badkamerinstallatie", "architect", "ingenieursbureau", "constructeur", "bouwkundig advies",
+      "installatieadvies", "bouwinspectie", "projectmanagement", "vastgoed", "property management", "facility management",
+      "woningcorporatie", "vve", "verhuur", "commercieel vastgoed", "studentenhuisvesting", "vakantiehuis", "bouw"
+    ]
+  },
+  "logistics": {
+    "label": "transport & logistiek",
+    "demo_id": "logistics-transport",
+    "default_business": ["FastRoute Logistics", "Antwerpen"],
+    "sample_question": "Goedemorgen! Waar is zending FR-8842 gebleven? We hebben het vandaag nodig op onze site in Gent.",
+    "sample_answer": "Zending FR-8842 staat gepland voor levering vandaag tussen 14:00–16:00 in Gent. De chauffeur is onderweg vanuit ons hub in Antwerpen — ik stuur je zo de track & trace-link.",
+    "upload_knowledge": "## Transporttarieven\n- Nationaal pallet (tot 800 kg) — vanaf €85\n- Koeltransport — vanaf €120 per pallet\n- Express same-day (BE) — vanaf €195\n\n## Levering\nMa–Za · Track & trace op elke zending\n\n## Contact\nLogistiekpark 22, Antwerpen · dispatch 24/7",
+    "keywords": [
+      "vrachtwagen", "transporteur", "transport", "koeltransport", "adr", "bulktransport", "tanktransport",
+      "containertransport", "koerier", "pakketbezorging", "express delivery", "same-day", "last-mile", "food delivery",
+      "medische bezorging", "warehouse", "distributiecentrum", "fulfilment", "cold storage", "cross-docking",
+      "self-storage", "expediteur", "douane", "import", "export", "logistiek", "supply chain", "scheepvaart",
+      "binnenvaart", "luchtvracht", "spoor", "busbedrijf", "touringcar", "taxi", "personenvervoer", "logistics"
+    ]
+  },
+  "financial": {
+    "label": "financieel, juridisch & verzekeringen",
+    "demo_id": "financial-advisory",
+    "default_business": ["De Vries & Partners", "Amsterdam"],
+    "sample_question": "Hoi! Ik heb schade gemeld na een lekkage — wanneer komt de expert langs en wat moet ik aanleveren?",
+    "sample_answer": "De expert plant meestal binnen 5 werkdagen een bezoek in. Stuur foto's van de schade, je polisnummer en een korte omschrijving door — dan zet ik het dossier meteen klaar.",
+    "upload_knowledge": "## Dienstverlening\n- Schade-expertise — binnen 5 werkdagen\n- Belastingaangifte MKB — vanaf €650 per jaar\n- Juridisch advies arbeidsrecht — €185/u\n\n## Documenten\nPolis, schadeformulier, facturen en foto's via WhatsApp\n\n## Contact\nKeizersgracht 120, Amsterdam · Ma–Vr 9:00–18:00",
+    "keywords": [
+      "accountant", "administratie", "boekhoud", "salarisadministratie", "belastingadvies", "financiële administratie",
+      "advocaat", "notaris", "juridisch", "incasso", "compliance", "contractmanagement", "arbeidsrecht", "vastgoedrecht",
+      "ondernemingsrecht", "assurantie", "verzekering", "verzekeringsmakelaar", "schadeverzekering", "autoverzekering",
+      "reisverzekering", "zorgverzekering", "claims", "schade-expertise", "hypotheek", "financieel planner",
+      "vermogensbeheer", "bank", "fintech", "leasing", "factoring", "krediet"
+    ]
+  },
+  "property": {
+    "label": "vastgoedbeheer & property management",
+    "demo_id": "property-management",
+    "default_business": ["WoonBeheer Plus", "Den Haag"],
+    "sample_question": "Hoi! Er lekt water uit het plafond in appartement 4B — kunnen jullie vandaag een loodgieter sturen?",
+    "sample_answer": "Dat nemen we meteen op als spoedmelding. Ik plan vandaag nog een loodgieter in tussen 15:00–17:00. Kun je een foto van de lekkage sturen en bevestigen of iemand thuis is?",
+    "upload_knowledge": "## Meldingen\n- Spoed onderhoud — binnen 4 uur\n- Regulier onderhoud — binnen 3 werkdagen\n- Huurdersportaal via WhatsApp\n\n## Diensten\nTechnisch beheer · Servicekosten · VvE-coördinatie\n\n## Contact\nBeheerstraat 5, Den Haag · storingslijn 24/7",
+    "keywords": [
+      "vastgoedbeheer", "property management", "huurwoning", "sociale woningbouw", "studentenwoning", "seniorenwoning",
+      "short-stay", "particuliere verhuur", "kantoorpand", "winkelcentrum", "retailpand", "bedrijventerrein", "magazijn",
+      "logistiek vastgoed", "technisch beheer", "administratief beheer", "servicekosten", "onderhoudsbeheer", "vve",
+      "appartementencomplex", "vereniging van eigenaren", "hotel", "vakantiepark", "resort", "serviced apartment",
+      "woningbeheer", "verhuurorganisatie"
+    ]
+  }
+}

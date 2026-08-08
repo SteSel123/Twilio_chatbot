@@ -105,5 +105,65 @@
       "question": "Nog één vraag — zijn jullie ook in het weekend bereikbaar?",
       "answer": "Op zaterdag helpen we je vaak wel verder; op zondag zijn we meestal gesloten. Stuur je vraag door, dan antwoorden we zo snel mogelijk."
     }
+  ],
+  "industrial": [
+    {
+      "keywords": ["storingsdienst", "cnc", "machine", "onderhoud"],
+      "question": "Kunnen jullie ook buiten kantooruren langskomen bij een storing?",
+      "answer": "Ja, onze storingsdienst is 24/7 bereikbaar. Stuur foutcode en serienummer door — dan sturen we de juiste monteur met onderdelen."
+    },
+    {
+      "keywords": ["preventief", "contract", "revisie"],
+      "question": "Bieden jullie ook een onderhoudscontract aan?",
+      "answer": "Zeker — we stellen graag een preventief plan op met vaste inspecties. Zal ik de opties en tarieven per mail of WhatsApp sturen?"
+    }
+  ],
+  "construction": [
+    {
+      "keywords": ["warmtepomp", "hvac", "airco", "installatie"],
+      "question": "Hoe snel kunnen jullie een intake op locatie plannen?",
+      "answer": "Meestal binnen 5 werkdagen. Stuur je adres en type woning/pand door — dan plannen we een gratis technische intake in."
+    },
+    {
+      "keywords": ["renovatie", "aannemer", "offerte"],
+      "question": "Kunnen jullie ook een vaste prijs offerte geven?",
+      "answer": "Na de intake maken we een heldere offerte met planning en garantievoorwaarden. Wil je dat ik alvast een datum voorstel?"
+    }
+  ],
+  "logistics": [
+    {
+      "keywords": ["zending", "track", "levering", "transport"],
+      "question": "Kunnen jullie de exacte ETA van mijn zending doorgeven?",
+      "answer": "Ja — stuur je referentienummer door, dan stuur ik meteen de track & trace-link en het verwachte levervenster."
+    },
+    {
+      "keywords": ["koel", "express", "same-day"],
+      "question": "Is same-day delivery ook mogelijk?",
+      "answer": "Voor express en same-day kijken we naar ophaallocatie en volume. Geef door wat en wanneer het moet aankomen — dan bevestig ik de opties."
+    }
+  ],
+  "financial": [
+    {
+      "keywords": ["schade", "claim", "verzekering", "expert"],
+      "question": "Welke documenten moet ik aanleveren voor mijn schadeclaim?",
+      "answer": "Meestal polisnummer, schadeformulier, foto's en relevante facturen. Stuur wat je hebt via WhatsApp — ik controleer of het dossier compleet is."
+    },
+    {
+      "keywords": ["belasting", "accountant", "advies"],
+      "question": "Kunnen we een kennismakingsgesprek inplannen?",
+      "answer": "Graag — een eerste gesprek duurt meestal 30 minuten. Welke dag en tijd past het best voor jou?"
+    }
+  ],
+  "property": [
+    {
+      "keywords": ["lekkage", "spoed", "onderhoud", "huurder"],
+      "question": "Hoe snel regelen jullie een spoedmelding in mijn appartement?",
+      "answer": "Spoedmeldingen pakken we binnen enkele uren op. Stuur je adres, appartementnummer en een foto — dan plan ik meteen een technieker in."
+    },
+    {
+      "keywords": ["vve", "servicekosten", "beheer"],
+      "question": "Kunnen huurders ook via WhatsApp een onderhoudsmelding doen?",
+      "answer": "Ja, dat kan via ons WhatsApp-kanaal. Huurders sturen een korte omschrijving en foto — wij coördineren de opvolging met de technische dienst."
+    }
   ]
 }
