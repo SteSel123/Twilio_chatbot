@@ -3,10 +3,10 @@
 from platform.mcp_tools import get_customer_context, search_business_docs, web_search_for_tenant
 
 
-def test_search_business_docs_salon():
-    result = search_business_docs("haircut price", "salon")
+def test_search_business_docs_default():
+    result = search_business_docs("hours", "default")
     assert isinstance(result, str)
-    assert result  # salon docs exist
+    assert result  # default docs exist
 
 
 def test_get_customer_context_empty():

@@ -20,33 +20,30 @@ WEEKDAY_NL = (
 
 CLOSED_MARKERS = ("gesloten", "closed", "24 hours closed")
 
-# When open: just be friendly — no sales pitch on a hours question.
 _OPEN_CLOSING: dict[str, str] = {
-    "restaurant": "Je bent van harte welkom!",
-    "salon": "Tot snel!",
-    "retail": "We zien je graag!",
-    "healthcare": "Tot snel!",
-    "energy": "Tot ziens!",
+    "industrial": "We helpen je graag verder!",
+    "construction": "Tot de intake op locatie!",
+    "logistics": "We sturen je meteen de status door!",
+    "financial": "Tot snel!",
+    "property": "We houden je op de hoogte!",
     "services": "Tot ziens!",
 }
 
-# When closed: alternative first; soft CTA only for visit-oriented sectors.
 _CLOSED_SOFT_CTA: dict[str, str] = {
-    "restaurant": "Zal ik alvast iets voor je reserveren?",
-    "salon": "Zal ik een moment voor je vastleggen?",
-    "retail": "Wil je dat ik het voor je klaarleg?",
-    "healthcare": "Zal ik een afspraak voor je inplannen?",
-    "energy": "Stuur gerust een berichtje — dan plannen we een geschikt moment.",
+    "industrial": "Zal ik alvast een storings- of onderhoudsmoment voorstellen?",
+    "construction": "Zal ik een intake op locatie voor je inplannen?",
+    "logistics": "Wil je dat ik een ophaalmoment of ETA-bevestiging stuur?",
+    "financial": "Zal ik een afspraak of documentchecklist sturen?",
+    "property": "Zal ik een technieker of bezichtiging voor je inplannen?",
     "services": "Stuur gerust je vraag door — we nemen het snel op.",
 }
 
-# Extra nudge only when sector FAQ is purely informational (no next step yet).
 _SOFT_SECTOR_NUDGE: dict[str, str] = {
-    "restaurant": "Wil je vanavond langskomen?",
-    "salon": "Wil je dat ik een plek voor je zoek?",
-    "retail": "Kom gerust langs als je wilt kijken.",
-    "healthcare": "Wil je dat ik een afspraak voorstel?",
-    "energy": "Wil je dat we een kort plaatsbezoek inplannen?",
+    "industrial": "Wil je dat we de monteur definitief inplannen?",
+    "construction": "Wil je dat we de intake op locatie vastleggen?",
+    "logistics": "Wil je dat ik de zending meteen reserveer?",
+    "financial": "Wil je dat we een kort gesprek inplannen?",
+    "property": "Wil je dat ik de technieker bevestig?",
     "services": "Wil je dat we een moment inplannen?",
 }
 
@@ -56,11 +53,13 @@ def is_closed_hours_message(text: str) -> bool:
     return any(m in lower for m in CLOSED_MARKERS)
 
 
-def _next_open_day_hint(weekday_descriptions: list[str] | None) -> str:
-    """Find next non-closed day from Google Maps weekday lines."""
+def _next_open_day_hint(weekday_descriptions: list[str] | None, locale: str = "nl") -> str:
+    from platform.preview_i18n import normalize_locale, pt
+
+    loc = normalize_locale(locale)
     lines = weekday_descriptions or []
     if not lines:
-        return "We zijn binnenkort weer open — stuur gerust een berichtje."
+        return pt("next_open_fallback", loc)
 
     today_idx = datetime.now(DEFAULT_TZ).weekday()
     for offset in range(1, 8):
@@ -74,10 +73,10 @@ def _next_open_day_hint(weekday_descriptions: list[str] | None) -> str:
         hours = re.sub(r"^[A-Za-zÀ-ÿ]+:\s*", "", line).strip()
         day_label = line.split(":")[0].strip() if ":" in line else WEEKDAY_NL[idx].capitalize()
         if hours:
-            return f"{day_label.capitalize()} zijn we weer open ({hours})."
-        return f"{day_label.capitalize()} zijn we weer open."
+            return pt("next_open_day", loc, day=day_label.capitalize(), hours=hours)
+        return pt("next_open_day_simple", loc, day=day_label.capitalize())
 
-    return "Stuur ons gerust een berichtje — dan kijken we wanneer het past."
+    return pt("next_open_fallback", loc)
 
 
 def _normalize_today_summary(today_summary: str) -> str:
@@ -92,7 +91,6 @@ def _normalize_today_summary(today_summary: str) -> str:
 
 
 def _parse_today_hours(today_summary: str) -> tuple[bool | None, str]:
-    """Return (closed?, hours_text) from a today summary line."""
     today = (today_summary or "").strip()
     if not today:
         return None, ""
@@ -107,10 +105,20 @@ def _parse_today_hours(today_summary: str) -> tuple[bool | None, str]:
     return None, today.rstrip(".")
 
 
-def _format_hours_for_speech(hours: str) -> str:
-    """Turn '09:00–18:00 uur' into natural Dutch '09:00 tot 18:00 uur'."""
+def _format_hours_for_speech(hours: str, locale: str = "nl") -> str:
+    from platform.preview_i18n import normalize_locale
+
+    loc = normalize_locale(locale)
     text = (hours or "").strip().rstrip(".")
-    text = re.sub(r"\s*[-–—]\s*", " tot ", text)
+    separator = {
+        "nl": " tot ",
+        "en": " to ",
+        "fr": " à ",
+        "es": " a ",
+        "it": " alle ",
+        "de": " bis ",
+    }.get(loc, " to ")
+    text = re.sub(r"\s*[-–—]\s*", separator, text)
     return text
 
 
@@ -120,38 +128,34 @@ def commercial_opening_answer(
     business_name: str,
     industry: str,
     weekday_descriptions: list[str] | None = None,
+    locale: str = "nl",
 ) -> str:
-    """Opening-hours reply — personal tone with business name; CTA only when closed."""
-    industry_key = (industry or "services").lower()
+    from platform.preview_i18n import industry_copy, normalize_locale, pt
+
+    industry_key = (industry or "construction").lower()
+    loc = normalize_locale(locale)
     today = _normalize_today_summary(today_summary)
-    name = business_name.strip() or "ons"
+    name = business_name.strip() or pt("us_fallback", loc)
 
     if not today:
-        return (
-            f"Hoi! Bij {name} helpen we je graag. "
-            "Ik heb de openingstijden nu niet meteen paraat — stuur gerust je vraag door."
-        )
+        return pt("opening_no_hours_online", loc, business=name)
 
     closed, hours = _parse_today_hours(today)
 
     if closed is True or is_closed_hours_message(today):
-        alternative = _next_open_day_hint(weekday_descriptions)
-        soft = _CLOSED_SOFT_CTA.get(industry_key, _CLOSED_SOFT_CTA["services"])
-        return (
-            f"Ja, wij bij {name} zijn vandaag gesloten. {alternative} {soft}"
-        )
+        alternative = _next_open_day_hint(weekday_descriptions, loc)
+        soft = industry_copy("closed_cta", industry_key, loc)
+        return pt("opening_closed", loc, business=name, next_open=alternative, soft_cta=soft)
 
+    closing = industry_copy("open_closing", industry_key, loc)
     if hours:
-        hours_spoken = _format_hours_for_speech(hours)
-        closing = _OPEN_CLOSING.get(industry_key, _OPEN_CLOSING["services"])
-        return f"Ja, wij bij {name} zijn vandaag open van {hours_spoken}. {closing}"
+        hours_spoken = _format_hours_for_speech(hours, loc)
+        return pt("opening_open_hours", loc, business=name, hours=hours_spoken, closing=closing)
 
-    closing = _OPEN_CLOSING.get(industry_key, _OPEN_CLOSING["services"])
-    return f"Ja, wij bij {name} zijn vandaag open. {closing}"
+    return pt("opening_open_today", loc, business=name, closing=closing)
 
 
 def _answer_already_has_next_step(text: str) -> bool:
-    """True when the FAQ answer already invites action — avoid double CTAs."""
     lower = text.lower()
     markers = (
         "zal ik",
@@ -183,7 +187,6 @@ def commercialize_sector_answer(
     *,
     business_name: str = "",
 ) -> str:
-    """Light commercial nudge only when the sector answer has no next step yet."""
     text = (answer or "").strip()
     if not text:
         return text
@@ -191,7 +194,7 @@ def commercialize_sector_answer(
     if _answer_already_has_next_step(text):
         return text
 
-    industry_key = (industry or "services").lower()
+    industry_key = (industry or "construction").lower()
     nudge = _SOFT_SECTOR_NUDGE.get(industry_key, _SOFT_SECTOR_NUDGE["services"])
     base = text.rstrip(".")
     return f"{base}. {nudge}"

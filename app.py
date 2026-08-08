@@ -534,7 +534,6 @@ def setup_knowledge_preview():
     from platform.setup_preview import (
         allowed_image,
         process_business_lookup,
-        process_demo_sample,
         process_knowledge_upload,
         vision_available,
     )
@@ -545,23 +544,8 @@ def setup_knowledge_preview():
         return jsonify({"error": "Invalid or expired setup link"}), 403
 
     profile = load_business_profile(tenant_id)
-    demo_id = (request.form.get("demo_id") or "").strip()
     owner_email = get_setup_email(tenant_id)
-
-    if demo_id:
-        try:
-            result = process_demo_sample(
-                tenant_id=tenant_id,
-                demo_id=demo_id,
-                business_name=profile.business_name,
-                industry=profile.industry,
-                owner_email=owner_email,
-            )
-            agent.reload_docs(tenant_id)
-            return jsonify({"status": "ok", **_enrich_preview_result(result)})
-        except Exception as exc:
-            logger.error("Demo preview failed for %s: %s", tenant_id, exc)
-            return jsonify({"error": str(exc)}), 400
+    locale = (request.form.get("locale") or "nl").strip().lower()[:2]
 
     file = request.files.get("photo")
     if file and file.filename:
@@ -588,7 +572,9 @@ def setup_knowledge_preview():
                 image_path=tmp_path,
                 source_name=file.filename,
                 owner_email=owner_email,
-                persist=False,
+                persist=True,
+                agent=agent,
+                locale=locale,
             )
             return jsonify({"status": "ok", **_enrich_preview_result(result)})
         except Exception as exc:
@@ -615,14 +601,51 @@ def setup_knowledge_preview():
                 city=business_city,
                 specialization=profile.specialization or "",
                 owner_email=owner_email,
+                agent=agent,
+                locale=locale,
             )
-            agent.reload_docs(tenant_id)
             return jsonify({"status": "ok", **_enrich_preview_result(result)})
         except Exception as exc:
             logger.error("Business lookup failed for %s: %s", tenant_id, exc)
             return jsonify({"error": str(exc)}), 400
 
     return jsonify({"error": "Geen bedrijfsgegevens gevonden. Probeer opnieuw aan te melden."}), 400
+
+
+@app.route("/setup/preview-chat", methods=["POST"])
+def setup_preview_chat():
+    """Extra agentic turn during setup preview (optional follow-up)."""
+    from platform.onboarding import verify_setup_token
+    from platform.preview_agent import handle_preview_turn
+    from platform.preview_ui import turn_to_steps
+
+    tenant_id = request.form.get("tenant_id", "")
+    token = request.form.get("token", "")
+    message = (request.form.get("message") or "").strip()
+    if not tenant_id or not token or not verify_setup_token(tenant_id, token):
+        return jsonify({"error": "Invalid or expired setup link"}), 403
+    if not message:
+        return jsonify({"error": "Bericht ontbreekt."}), 400
+
+    profile = load_business_profile(tenant_id)
+    try:
+        turn = handle_preview_turn(agent, tenant_id=tenant_id, message=message)
+        steps = turn_to_steps(
+            message,
+            turn.reply,
+            industry=profile.industry,
+            traces=turn.traces,
+            response_tags=turn.tags,
+        )
+        return jsonify({
+            "status": "ok",
+            "reply": turn.reply,
+            "steps": steps,
+            "preview_mode": "agentic",
+        })
+    except Exception as exc:
+        logger.error("Preview chat failed for %s: %s", tenant_id, exc)
+        return jsonify({"error": str(exc)}), 500
 
 
 @app.route("/onboard/google/start", methods=["GET"])

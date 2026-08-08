@@ -106,47 +106,13 @@ def setup_url(tenant_id: str, token: str) -> str:
 
 
 def infer_industry_from_specialization(specialization: str) -> str:
-    """Map free-text specialization to internal industry slug for demo/web search."""
-    s = specialization.lower()
-
-    energy_words = [
-        "zonnepanel", "solar", "energie", "warmtepomp", "elektricien", "installateur",
-        "pv", "thuisbatterij", "laadpaal", "hvac", "airco", "verwarming",
-    ]
-    if any(w in s for w in energy_words):
-        return "energy"
-
+    """Map free-text specialization to B2B industry slug for demo/web search."""
     from platform.verticals import infer_vertical_from_specialization
 
     vertical = infer_vertical_from_specialization(specialization)
     if vertical:
         return vertical
-
-    keywords = {
-        "restaurant": [
-            "restaurant", "café", "cafe", "eetcafe", "bistro", "pizzeria", "horeca",
-            "bakker", "catering", "trattoria", "steakhouse", "sushi",
-        ],
-        "salon": [
-            "kapsalon", "salon", "kapper", "nagel", "beauty", "barber", "haar",
-            "wellness", "spa", "massage", "nagels",
-        ],
-        "retail": [
-            "winkel", "shop", "retail", "kleding", "mode", "supermarkt", "boutique",
-            "fietsen", "meubel", "electro",
-        ],
-        "healthcare": [
-            "tandarts", "fysio", "kliniek", "zorg", "huisarts", "therapie", "diëtist",
-        ],
-        "energy": [
-            "zonnepanel", "solar", "energie", "warmtepomp", "elektricien", "installateur",
-            "pv", "thuisbatterij", "laadpaal", "hvac", "airco", "verwarming",
-        ],
-    }
-    for industry, words in keywords.items():
-        if any(w in s for w in words):
-            return industry
-    return "services"
+    return "construction"
 
 
 def create_business_signup(

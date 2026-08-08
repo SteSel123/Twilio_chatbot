@@ -234,6 +234,7 @@ def create_calendar_event(
     start: datetime,
     end: datetime,
     details: str = "",
+    attendee_emails: list[str] | None = None,
 ) -> str:
     """Create event via OAuth credentials; returns event id or empty string."""
     if not is_connected(tenant_id):
@@ -249,14 +250,19 @@ def create_calendar_event(
         profile = load_business_profile(tenant_id)
         calendar_id = profile.google_calendar_id or "primary"
         service = build("calendar", "v3", credentials=creds)
+        emails = [e.strip() for e in (attendee_emails or []) if e and "@" in e]
+        body: dict = {
+            "summary": title,
+            "description": details,
+            "start": {"dateTime": start.isoformat(), "timeZone": "UTC"},
+            "end": {"dateTime": end.isoformat(), "timeZone": "UTC"},
+        }
+        if emails:
+            body["attendees"] = [{"email": e} for e in emails]
         event = service.events().insert(
             calendarId=calendar_id,
-            body={
-                "summary": title,
-                "description": details,
-                "start": {"dateTime": start.isoformat(), "timeZone": "UTC"},
-                "end": {"dateTime": end.isoformat(), "timeZone": "UTC"},
-            },
+            body=body,
+            sendUpdates="all" if emails else "none",
         ).execute()
         return event.get("id", "")
     except Exception as exc:

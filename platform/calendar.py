@@ -107,6 +107,8 @@ def book_appointment(
     slot_time: str,
     service: str = "",
     customer_name: str = "",
+    customer_email: str = "",
+    owner_email: str = "",
     duration_minutes: int = 60,
 ) -> dict:
     """Book an appointment; sync to Google Calendar when credentials are configured."""
@@ -118,11 +120,24 @@ def book_appointment(
 
     end = start + timedelta(minutes=duration_minutes)
     title = f"{profile.business_name} — {service or 'Appointment'}"
-    details = f"Customer: {customer_name or user_id}\nService: {service}"
+    details = f"Customer: {customer_name or user_id}"
+    if customer_email:
+        details += f" ({customer_email})"
+    details += f"\nService: {service}"
+
+    invite_emails = [
+        e.strip().lower()
+        for e in (customer_email, owner_email)
+        if e and "@" in e and not e.strip().lower().endswith("@pending.local")
+    ]
+    invite_emails = list(dict.fromkeys(invite_emails))
+
     event_id = ""
     from platform.google_oauth import create_calendar_event
 
-    event_id = create_calendar_event(tenant_id, title, start, end, details)
+    event_id = create_calendar_event(
+        tenant_id, title, start, end, details, attendee_emails=invite_emails
+    )
     if not event_id and GOOGLE_CALENDAR_CREDENTIALS_JSON:
         event_id = _create_google_event(profile, title, start, end, details)
 
@@ -154,6 +169,7 @@ def book_appointment(
         "calendar_link": cal_link,
         "google_synced": bool(event_id),
         "oauth_calendar": bool(event_id),
+        "invites_sent": invite_emails,
     }
 
 

@@ -5,6 +5,7 @@ from unittest.mock import patch
 from platform.business_profile import BusinessProfile
 
 
+@patch("agent.openai_tool_calling_available", return_value=False)
 @patch("agent.generate_response", return_value="Vandaag open tot 17:00.")
 @patch(
     "agent.get_maps_context_for_profile",
@@ -15,7 +16,7 @@ from platform.business_profile import BusinessProfile
     ),
 )
 @patch("agent.vector_search", return_value="")
-def test_agent_injects_google_maps_for_hours(mock_rag, mock_maps, mock_llm):
+def test_agent_injects_google_maps_for_hours(mock_rag, mock_maps, mock_llm, mock_tooling):
     from agent import BusinessAgent
 
     agent = BusinessAgent()
@@ -26,7 +27,7 @@ def test_agent_injects_google_maps_for_hours(mock_rag, mock_maps, mock_llm):
         tenant_id=tenant,
         business_name="EWS Energy",
         business_city="Merchtem",
-        industry="energy",
+        industry="construction",
     )
     with patch("agent.load_business_profile", return_value=profile):
         agent.handle_message(uid, "yes", tenant_id=tenant)
@@ -38,10 +39,11 @@ def test_agent_injects_google_maps_for_hours(mock_rag, mock_maps, mock_llm):
     assert "Stoofstraat" in internal
 
 
+@patch("agent.openai_tool_calling_available", return_value=False)
 @patch("agent.generate_response", return_value="Adres: Stationsstraat 1")
 @patch("agent.get_maps_context_for_profile", return_value="")
 @patch("agent.vector_search", return_value="")
-def test_agent_skips_maps_for_unrelated_question(mock_rag, mock_maps, mock_llm):
+def test_agent_skips_maps_for_unrelated_question(mock_rag, mock_maps, mock_llm, mock_tooling):
     from agent import BusinessAgent
 
     agent = BusinessAgent()
@@ -52,10 +54,10 @@ def test_agent_skips_maps_for_unrelated_question(mock_rag, mock_maps, mock_llm):
         tenant_id=tenant,
         business_name="EWS Energy",
         business_city="Merchtem",
-        industry="energy",
+        industry="construction",
     )
     with patch("agent.load_business_profile", return_value=profile):
         agent.handle_message(uid, "yes", tenant_id=tenant)
-        agent.handle_message(uid, "Wat kost een zonnepaneel?", tenant_id=tenant)
+        agent.handle_message(uid, "Wat kost een warmtepomp?", tenant_id=tenant)
 
     mock_maps.assert_not_called()

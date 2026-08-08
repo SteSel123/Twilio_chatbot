@@ -23,7 +23,6 @@ from config import (
     OPENAI_BASE_URL,
     OPENAI_MODEL,
     OPENAI_VISION_MODEL,
-    SETUP_USE_LLM_DEMO,
     SETUP_VISION_MAX_PIXELS,
     OLLAMA_VISION_TIMEOUT,
 )
@@ -60,29 +59,10 @@ TABLE_VISION_PROMPT = (
     "Copy every euro amount and range (tot, –) exactly as shown. Plain text only. No JSON."
 )
 
-INDUSTRY_TO_DEMO = {
-    "restaurant": "restaurant-menu",
-    "salon": "salon-prices",
-    "retail": "shop-hours",
-    "services": "shop-hours",
-    "healthcare": "salon-prices",
-    "other": "shop-hours",
-    "general": "restaurant-menu",
-    "industrial": "industrial-service",
-    "construction": "construction-install",
-    "logistics": "logistics-transport",
-    "financial": "financial-advisory",
-    "property": "property-management",
-}
-
 DEFAULT_WEBSITE_URLS = {
-    "restaurant": "/demo-site/restaurant",
-    "salon": "/demo-site/salon",
-    "retail": "/demo-site/retail",
-    "services": "/demo-site/retail",
-    "healthcare": "/demo-site/salon",
-    "other": "/demo-site/retail",
-    "general": "/demo-site/restaurant",
+    "services": "/demo-site/industrial",
+    "other": "/demo-site/industrial",
+    "general": "/demo-site/industrial",
     "industrial": "/demo-site/industrial",
     "construction": "/demo-site/construction",
     "logistics": "/demo-site/logistics",
@@ -119,29 +99,28 @@ def absolutize_url(path: str, base_url: str) -> str:
 
 def get_demo_site_industry_slug(industry: str) -> str:
     mapping = {
-        "restaurant": "restaurant",
-        "salon": "salon",
-        "retail": "retail",
-        "services": "retail",
-        "healthcare": "salon",
-        "other": "retail",
-        "general": "restaurant",
+        "services": "industrial",
+        "other": "industrial",
+        "general": "industrial",
         "industrial": "industrial",
         "construction": "construction",
         "logistics": "logistics",
         "financial": "financial",
         "property": "property",
     }
-    return mapping.get(industry.lower(), "retail")
+    return mapping.get(industry.lower(), "industrial")
 
 
 def render_demo_site_html(industry: str) -> str:
+    from platform.verticals import get_vertical
+
     slug = get_demo_site_industry_slug(industry)
-    demo_id = INDUSTRY_TO_DEMO.get(industry.lower(), INDUSTRY_TO_DEMO["retail"])
-    sample = get_demo_sample(demo_id) or DEMO_SAMPLES[0]
-    title = sample["label"]
+    cfg = get_vertical(slug) or get_vertical("industrial") or {}
+    title = str(cfg.get("label", "Demo site"))
+    knowledge = str(cfg.get("upload_knowledge", ""))
+    description = title
     body_parts: list[str] = []
-    for raw in sample["knowledge"].splitlines():
+    for raw in knowledge.splitlines():
         line = raw.strip()
         if not line:
             continue
@@ -169,7 +148,7 @@ def render_demo_site_html(industry: str) -> str:
     return (
         f"<!DOCTYPE html><html lang='nl'><head><meta charset='utf-8'>"
         f"<title>{title}</title>"
-        f"<meta name='description' content='{sample['description']}'>"
+        f"<meta name='description' content='{description}'>"
         f"</head><body><h1>{title}</h1>{''.join(html_body)}</body></html>"
     )
 
@@ -269,28 +248,8 @@ def fetch_website_knowledge(url: str, timeout: int = 15) -> dict[str, str]:
     }
 
 
-DEMO_PROMPT = (
-    "Je bent AppAssist, WhatsApp-assistent voor {business_name} ({industry}).\n\n"
-    "Bedrijfsinfo uit geüploade foto:\n{knowledge}\n\n"
-    "Taak:\n"
-    "1. Kies ÉÉN concreet gegeven uit de info (gerecht+prijs, openingstijd, dienst).\n"
-    "2. Schrijf een realistische WhatsApp-vraag van een klant in het Nederlands.\n"
-    "3. Schrijf het antwoord van AppAssist (max 80 woorden, Nederlands, alleen feiten uit de info).\n"
-    "4. Schrijf een korte samenvatting voor de ONDERNEMER (max 60 woorden): wat vroeg de klant, "
-    "wat antwoordde de bot, lead-status (warm/koud), aanbevolen vervolgactie.\n"
-    "5. Als een afspraak of reservering logisch is ({industry}), stel een concreet voorstel voor "
-    "(datum/tijd/dienst). Anders lege string.\n\n"
-    'Antwoord ALLEEN als JSON zonder markdown:\n'
-    '{{"sample_question":"...","sample_answer":"...","fact_used":"...",'
-    '"owner_summary":"...","appointment_suggestion":"... of leeg"}}'
-)
-
 INDUSTRY_LABELS = {
-    "restaurant": "restaurant",
-    "salon": "kapsalon/schoonheidssalon",
-    "retail": "winkel",
     "services": "dienstverlener",
-    "healthcare": "zorgverlener",
     "other": "bedrijf",
     "general": "bedrijf",
     "industrial": "industrie & maintenance",
@@ -530,7 +489,7 @@ def _extract_and_demo_from_image(
         raise RuntimeError(
             "Foto niet betrouwbaar gelezen. Probeer een scherpere foto van je eigen menu/prijslijst."
         )
-    return knowledge, generate_demo_conversation_fast(knowledge, business_name, industry)
+    return knowledge, {}
 
 
 def _demo_from_parsed(parsed: dict) -> dict[str, str]:
@@ -802,13 +761,14 @@ def _is_sensible_menu_price(price_str: str, industry: str) -> bool:
     if amount is None:
         return False
     caps = {
-        "restaurant": 180.0,
-        "salon": 600.0,
-        "retail": 2500.0,
-        "services": 800.0,
-        "energy": 10000.0,
+        "industrial": 5000.0,
+        "construction": 25000.0,
+        "logistics": 5000.0,
+        "financial": 15000.0,
+        "property": 8000.0,
+        "services": 8000.0,
     }
-    cap = caps.get(industry.lower(), 900.0)
+    cap = caps.get(industry.lower(), 15000.0)
     return 0.5 <= amount <= cap
 
 
@@ -826,177 +786,6 @@ def _extract_customer_facing_knowledge(knowledge: str) -> str:
         if clean and _is_sensible_fact_line(clean):
             filtered.append(raw)
     return "\n".join(filtered) if filtered else knowledge
-
-
-def _validate_demo_conversation(demo: dict[str, str], business_name: str) -> bool:
-    question = (demo.get("sample_question") or "").strip()
-    answer = (demo.get("sample_answer") or "").strip()
-    if not question or not answer or len(question) < 12 or len(question) > 180:
-        return False
-    if "{" in question or "{" in answer:
-        return False
-    if _matches_bad_corporate_text(question):
-        return False
-    if _matches_bad_fact(question):
-        return False
-    if _matches_bad_corporate_text(answer):
-        return False
-    if _looks_like_json_blob(question) or _looks_like_json_blob(answer):
-        return False
-    price_q = re.search(r"Wat kost (.+?) bij ", question, re.I)
-    if price_q:
-        if not _is_sensible_product_name(price_q.group(1)):
-            return False
-    tell_q = re.search(r"vertellen over (.+)\?$", question, re.I)
-    if tell_q:
-        if not _is_sensible_product_name(tell_q.group(1)) and not _is_sensible_fact_line(tell_q.group(1)):
-            return False
-    if len(answer) < 24:
-        return False
-    return True
-
-
-def _validate_demo_conversation_strict(demo: dict[str, str], business_name: str) -> bool:
-    """Second pass — catch awkward phrasing before showing in UI."""
-    question = demo.get("sample_question", "")
-    if re.search(r"\b(in 20\d{2}|recorded|revenue|group|wikipedia)\b", question, re.I):
-        return False
-    if question.count("?") > 2:
-        return False
-    words = question.replace("?", "").split()
-    if len(words) > 22:
-        return False
-    return _validate_demo_conversation(demo, business_name)
-
-
-def _fallback_demo_conversation(
-    business_name: str,
-    industry: str,
-    specialization: str = "",
-) -> dict[str, str]:
-    """Safe, logical WhatsApp example when extracted facts are unusable."""
-    name = business_name.strip() or "jullie zaak"
-    spec = specialization.strip()
-    industry_key = industry.lower()
-    if industry_key == "restaurant":
-        question = f"Hoi! Kunnen we vrijdagavond met z'n vieren reserveren bij {name}?"
-        answer = (
-            f"Hoi, wat leuk dat je appt! Bij {name} helpen we je graag met een reservering. "
-            f"Hoe laat had je gedacht en zijn er dieetwensen waar we rekening mee moeten houden?"
-        )
-        fact = "Reservering vrijdagavond"
-    elif industry_key == "salon":
-        question = f"Hoi! Kan ik volgende week een afspraak maken voor knippen bij {name}?"
-        answer = (
-            f"Hoi! Leuk dat je contact opneemt. Bij {name} plannen we je graag in. "
-            f"Welke dag en tijd komt het best uit voor jou?"
-        )
-        fact = "Afspraak knippen"
-    elif spec:
-        question = f"Hoi! Wat zijn jullie openingstijden? We zijn op zoek naar {spec}."
-        answer = (
-            f"Hoi, welkom bij {name}! We helpen je graag verder. "
-            f"Stel gerust je vraag over openingstijden, prijzen of een afspraak."
-        )
-        fact = spec
-    else:
-        question = f"Hoi! Wat zijn jullie openingstijden bij {name}?"
-        answer = (
-            f"Hoi, welkom bij {name}! We helpen je graag verder. "
-            f"Laat weten wanneer je langs wilt komen — dan kijken we wat het best past."
-        )
-        fact = "Openingstijden"
-    summary = (
-        f"Klant vroeg via WhatsApp over '{fact}'. "
-        f"Bot antwoordde vriendelijk en uitnodigend. Lead: warm — follow-up aanbevolen."
-    )
-    appointment = _default_appointment(industry, fact)
-    return {
-        "sample_question": question,
-        "sample_answer": answer,
-        "fact_used": fact,
-        "owner_summary": summary,
-        "appointment_suggestion": appointment,
-        "internal_note": _internal_note(summary, appointment),
-    }
-
-
-def _finalize_demo_conversation(
-    demo: dict[str, str],
-    *,
-    business_name: str,
-    industry: str,
-    specialization: str = "",
-) -> dict[str, str]:
-    if _validate_demo_conversation(demo, business_name) and _validate_demo_conversation_strict(
-        demo, business_name
-    ):
-        return demo
-    logger.info("Demo conversation failed validation for %s — using fallback", business_name)
-    return _fallback_demo_conversation(business_name, industry, specialization)
-
-
-BUSINESS_DEMO_PROMPT = (
-    "Schrijf een kort, realistisch WhatsApp-voorbeeldgesprek in het Nederlands.\n"
-    "Bedrijf: {business_name}\n"
-    "Specialisatie: {specialization}\n"
-    "Branche: {industry}\n\n"
-    "Gebruik ALLEEN concrete feiten uit de bedrijfsinfo hieronder.\n"
-    "Geen omzet, aandeelhouders, Wikipedia of jaartallen uit nieuwsberichten.\n"
-    "Als er geen prijzen staan: vraag over openingstijden, reserveren of een dienst.\n"
-    "Vraag en antwoord moeten natuurlijk klinken — alsof een echte klant appt.\n\n"
-    "Bedrijfsinfo:\n{knowledge}\n\n"
-    'Antwoord ALLEEN als JSON zonder markdown:\n'
-    '{{"sample_question":"...","sample_answer":"...","fact_used":"...",'
-    '"owner_summary":"...","appointment_suggestion":"... of leeg"}}'
-)
-
-
-def _llm_text_available() -> bool:
-    if LLM_PROVIDER == "openai" and OPENAI_API_KEY:
-        return True
-    if LLM_PROVIDER == "ollama":
-        return True
-    return bool(OPENAI_API_KEY)
-
-
-def _generate_business_demo_llm(
-    knowledge: str,
-    business_name: str,
-    industry: str,
-    specialization: str,
-) -> dict[str, str] | None:
-    if not _llm_text_available():
-        return None
-    prompt = BUSINESS_DEMO_PROMPT.format(
-        business_name=business_name,
-        specialization=specialization or _industry_label(industry),
-        industry=_industry_label(industry),
-        knowledge=knowledge[:2800],
-    )
-    try:
-        raw = _simple_llm(prompt, max_tokens=450, temperature=0.2)
-    except Exception as exc:
-        logger.info("Business demo LLM failed: %s", exc)
-        return None
-    parsed = _parse_demo_json(raw) or _parse_demo_json_loose(raw)
-    if not parsed or not parsed.get("sample_question") or not parsed.get("sample_answer"):
-        return None
-    appointment = str(parsed.get("appointment_suggestion", "") or "").strip()
-    summary = str(parsed.get("owner_summary", "") or "").strip()
-    if not summary:
-        summary = (
-            f"Klant vroeg: {parsed.get('sample_question', '')}. "
-            f"Bot antwoordde op basis van {parsed.get('fact_used', 'bedrijfsinfo')}."
-        )
-    return {
-        "sample_question": str(parsed["sample_question"]).strip(),
-        "sample_answer": str(parsed["sample_answer"]).strip(),
-        "fact_used": str(parsed.get("fact_used", "")).strip(),
-        "owner_summary": summary,
-        "appointment_suggestion": appointment,
-        "internal_note": _internal_note(summary, appointment),
-    }
 
 
 def _extract_knowledge_field_loose(raw: str) -> str | None:
@@ -1070,27 +859,22 @@ def _pick_priced_item(
     return item, price
 
 
-def _pick_energy_installation_row(knowledge: str) -> tuple[str, str] | None:
+def _pick_energy_installation_row(knowledge: str) -> tuple[int, str] | None:
     """Pick a solar panel package row with total cost range from table OCR."""
     text = knowledge.replace("\n", " ")
+    price = r"(€\s*[\d.,]+\s*(?:tot|–|-)\s*€\s*[\d.,]+)"
     for count in (12, 16, 8, 20, 28):
-        pattern = (
-            rf"{count}\s*zonnepanelen[^\n|]*?"
-            rf"(?:totaal|totale kosten)[:\s]*"
-            rf"(€\s*[\d.,]+\s*(?:tot|–|-)\s*€\s*[\d.,]+)"
-        )
+        pattern = rf"{count}\s*zonnepanelen.*?(?:totaal|totale kosten)[:\s]*{price}"
         match = re.search(pattern, text, re.I)
         if match:
-            return f"{count} zonnepanelen", match.group(1).strip()
+            return count, match.group(1).strip()
     match = re.search(
-        r"(\d+)\s*zonnepanelen[^\n|]*?"
-        r"(?:totaal|totale kosten)[:\s]*"
-        r"(€\s*[\d.,]+\s*(?:tot|–|-)\s*€\s*[\d.,]+)",
+        rf"(\d+)\s*zonnepanelen.*?(?:totaal|totale kosten)[:\s]*{price}",
         text,
         re.I,
     )
     if match:
-        return f"{match.group(1)} zonnepanelen", match.group(2).strip()
+        return int(match.group(1)), match.group(2).strip()
     return None
 
 
@@ -1120,199 +904,74 @@ def _pick_hours_line(knowledge: str) -> str | None:
 
 def _opening_hours_fallback_answer(business_name: str, industry: str) -> str:
     name = business_name.strip() or "ons"
-    if industry.lower() in ("energy", "services", "healthcare"):
+    if industry.lower() in ("services", "financial", "property"):
         return (
             f"Hoi! Bij {name} werken we meestal op afspraak. "
             f"Stuur je vraag door — we antwoorden je zo snel mogelijk met de juiste info."
         )
     return (
-        f"Hoi! Bij {name} helpen we je graag verder — "
-        f"stuur je vraag door, dan geven we je meteen de actuele openingstijden door."
+        f"Bij {name} plannen we meestal op afspraak — er staan geen vaste walk-in uren online. "
+        f"Bel of mail ons gerust, dan geven we meteen door wanneer we beschikbaar zijn."
     )
 
 
-def generate_demo_conversation_fast(
-    knowledge: str,
-    business_name: str,
-    industry: str,
-    specialization: str = "",
-) -> dict[str, str]:
-    """Instant demo from extracted text — no extra LLM call."""
-    industry_key = industry.lower()
-    prefer = {
-        "restaurant": ["caesar", "carbonara", "burger", "biefstuk"],
-        "salon": ["knippen", "balayage", "highlights"],
-        "energy": ["zonnepanel", "panelen", "installatie"],
-    }.get(industry_key, [])
-
-    if industry_key == "energy":
-        solar = _pick_energy_installation_row(knowledge)
-        if solar:
-            panels, price_range = solar
-            question = f"Hoi! 😊 Wat kost een installatie met {panels} ongeveer?"
-            answer = (
-                f"Hoi! Voor {panels} liggen de totale kosten (materiaal + installatie) "
-                f"rond {price_range}. De exacte prijs hangt af van je dak en verbruik — "
-                f"wil je dat we een gratis plaatsbezoek inplannen?"
-            )
-            fact = f"{panels} — {price_range}"
-            summary = (
-                f"Klant vroeg via WhatsApp naar prijs voor {panels}. "
-                f"Bot antwoordde met info uit prijslijst. Lead: warm — follow-up aanbevolen."
-            )
-            appointment = _default_appointment(industry, fact)
-            return _finalize_demo_conversation(
-                {
-                    "sample_question": question,
-                    "sample_answer": answer,
-                    "fact_used": fact,
-                    "owner_summary": summary,
-                    "appointment_suggestion": appointment,
-                    "internal_note": _internal_note(summary, appointment),
-                },
-                business_name=business_name,
-                industry=industry,
-                specialization=specialization,
-            )
-
-    priced = _pick_priced_item(knowledge, prefer=prefer, industry=industry_key)
-    if priced:
-        item, price_str = priced
-        question = f"Hoi! 😊 Wat kost {item} bij {business_name}?"
-        if industry_key == "restaurant":
-            answer = (
-                f"Hoi, wat leuk dat je contact opneemt! {item} kost {price_str} — "
-                f"vers bereid en echt een favoriet bij ons. "
-                f"Zullen we meteen een tafel voor je reserveren?"
-            )
-        elif industry_key == "salon":
-            answer = (
-                f"Hoi, fijn dat je appt! {item} kost {price_str}. "
-                f"We nemen er rustig de tijd voor. "
-                f"Zal ik een afspraak voor je inplannen?"
-            )
-        else:
-            answer = (
-                f"Hoi, wat fijn dat je contact opneemt! {item} kost {price_str}. "
-                f"Laat gerust weten als je nog iets wilt weten — we helpen je graag!"
-            )
-        fact = f"{item} — {price_str}"
-    else:
-        hours = _pick_hours_line(knowledge)
-        if hours and _is_sensible_fact_line(hours):
-            question = f"Hoi! 😊 Wat zijn jullie openingstijden?"
-            name = business_name.strip() or "ons"
-            hours_clean = hours.rstrip(".")
-            if re.search(r"\d{1,2}:\d{2}", hours_clean) and "vandaag" not in hours_clean.lower():
-                from platform.commercial_tone import _format_hours_for_speech
-
-                if re.search(r"open:\s*", hours_clean, re.I):
-                    hours_spoken = _format_hours_for_speech(
-                        re.sub(r"^.*open:\s*", "", hours_clean, flags=re.I)
-                    )
-                    answer = (
-                        f"Ja, wij bij {name} zijn vandaag open van {hours_spoken}. "
-                        f"Je bent altijd welkom — laat gerust weten wanneer je langskomt!"
-                    )
-                else:
-                    answer = (
-                        f"Ja, wij bij {name} zijn open: {hours_clean}. "
-                        f"Je bent altijd welkom — laat gerust weten wanneer je langskomt!"
-                    )
-            else:
-                from platform.commercial_tone import commercial_opening_answer
-
-                answer = commercial_opening_answer(
-                    today_summary=hours_clean,
-                    business_name=name,
-                    industry=industry,
-                )
-            fact = hours
-        else:
-            fact_line = _pick_fact_line(knowledge)
-            if fact_line and _is_sensible_fact_line(fact_line) and len(fact_line.split()) <= 8:
-                fact = fact_line
-                question = f"Hoi! 😊 Kunnen jullie me iets vertellen over {fact}?"
-                answer = (
-                    f"Natuurlijk, graag! {fact}. "
-                    f"Stel gerust al je vragen — we helpen je met liefde verder!"
-                )
-            else:
-                return _fallback_demo_conversation(business_name, industry, specialization)
-
-    summary = (
-        f"Klant vroeg via WhatsApp over '{fact}'. "
-        f"Bot antwoordde met bedrijfsinfo. Lead: warm — follow-up aanbevolen."
-    )
-    appointment = _default_appointment(industry, fact)
-    demo = {
-        "sample_question": question,
-        "sample_answer": answer,
-        "fact_used": fact,
-        "owner_summary": summary,
-        "appointment_suggestion": appointment,
-        "internal_note": _internal_note(summary, appointment),
-    }
-    return _finalize_demo_conversation(
-        demo,
-        business_name=business_name,
-        industry=industry,
-        specialization=specialization,
-    )
-
-
-def generate_demo_conversation(
+def build_upload_customer_question(
     knowledge: str,
     business_name: str,
     industry: str,
     *,
-    specialization: str = "",
-    source: str = "",
-) -> dict[str, str]:
-    """Generate demo — validated twice; LLM for Google/business lookups when available."""
-    cleaned = _extract_customer_facing_knowledge(_normalize_knowledge(knowledge))
-    spec = specialization.strip()
+    source_name: str = "",
+    locale: str = "nl",
+) -> str:
+    """Klantvraag uit geüpload document — niet de generieke sector-template."""
+    from platform.preview_i18n import normalize_locale, pt
 
-    demo: dict[str, str] | None = None
-    if source == "business":
-        demo = _generate_business_demo_llm(cleaned, business_name, industry, spec)
-    if demo is None and SETUP_USE_LLM_DEMO and _llm_text_available():
-        prompt = DEMO_PROMPT.format(
-            business_name=business_name,
-            industry=_industry_label(industry),
-            knowledge=cleaned[:3000],
-        )
-        parsed = _parse_demo_json(_simple_llm(prompt, max_tokens=450, temperature=0.2))
-        if parsed:
-            appointment = str(parsed.get("appointment_suggestion", "") or "").strip()
-            summary = str(parsed.get("owner_summary", "") or "").strip()
-            if not summary:
-                summary = (
-                    f"Klant vroeg: {parsed.get('sample_question', '')}. "
-                    f"Bot antwoordde op basis van {parsed.get('fact_used', 'bedrijfsinfo')}."
-                )
-            demo = {
-                "sample_question": str(parsed["sample_question"]).strip(),
-                "sample_answer": str(parsed["sample_answer"]).strip(),
-                "fact_used": str(parsed.get("fact_used", "")).strip(),
-                "owner_summary": summary,
-                "appointment_suggestion": appointment,
-                "internal_note": _internal_note(summary, appointment),
-            }
-    if demo is None:
-        demo = generate_demo_conversation_fast(cleaned, business_name, industry, spec)
-    else:
-        demo = _finalize_demo_conversation(
-            demo,
-            business_name=business_name,
-            industry=industry,
-            specialization=spec,
-        )
-    return demo
+    loc = normalize_locale(locale)
+    industry_key = industry.lower()
+    prefer = {
+        "industrial": ["zonnepaneel", "storingsdienst", "preventief", "cnc", "onderhoud", "paneel"],
+        "construction": ["warmtepomp", "installatie", "cv", "airco", "zonnepaneel"],
+        "logistics": ["pallet", "transport", "express", "koel"],
+        "financial": ["schade", "belasting", "advies", "expert"],
+        "property": ["spoed", "lekkage", "beheer", "huur"],
+    }.get(industry_key, [])
+
+    solar = _pick_energy_installation_row(knowledge)
+    if solar:
+        count, _price = solar
+        from platform.preview_i18n import format_solar_panel_item
+
+        item = format_solar_panel_item(count, loc)
+        name = business_name.strip() or pt("you_fallback", loc)
+        return pt("upload_q_solar", loc, item=item, name=name)
+
+    priced = _pick_priced_item(knowledge, prefer=prefer, industry=industry_key)
+    if priced:
+        item, _price = priced
+        name = business_name.strip() or pt("you_fallback", loc)
+        return pt("upload_q_priced", loc, item=item, name=name)
+
+    fact_line = _pick_fact_line(knowledge)
+    if fact_line and _is_sensible_fact_line(fact_line):
+        topic = fact_line.split("—")[0].split("–")[0].strip("- •*").strip()
+        if 3 <= len(topic.split()) <= 12:
+            return pt("upload_q_topic", loc, topic=topic)
+
+    if source_name:
+        stem = Path(source_name).stem.replace("_", " ").replace("-", " ")
+        stem = re.sub(r"\s+", " ", stem).strip()
+        if stem and len(stem) >= 3:
+            from platform.preview_i18n import localize_upload_stem
+
+            return pt("upload_q_document", loc, stem=localize_upload_stem(stem, loc))
+
+    name = business_name.strip() or pt("you_fallback", loc)
+    return pt("upload_q_fallback", loc, name=name)
 
 
 def _default_appointment(industry: str, fact: str) -> str:
-    if industry.lower() in ("restaurant", "salon", "healthcare", "services"):
+    key = industry.lower()
+    if key in ("industrial", "construction", "logistics", "financial", "property", "services"):
         service = fact.split("—")[0].split("-")[0].strip()[:40] or "afspraak"
         return f"Voorstel: vrijdag 14:00 — {service} (via WhatsApp, nog te bevestigen)"
     return ""
@@ -1323,112 +982,6 @@ def _internal_note(summary: str, appointment: str) -> str:
     if appointment:
         parts.append(f"📅 {appointment}")
     return " · ".join(parts)
-
-
-def _knowledge_preview_lines(knowledge: str, max_items: int = 4) -> list[str]:
-    lines: list[str] = []
-    for raw in knowledge.splitlines():
-        line = raw.strip().lstrip("-•*#").strip()
-        if not line or line.startswith("##") or len(line) < 4:
-            continue
-        if _is_json_artifact_line(line):
-            continue
-        lines.append(line)
-        if len(lines) >= max_items:
-            break
-    return lines or ["Voorbeelddata AppAssist"]
-
-
-def _doc_items_for_source(
-    *,
-    source: str,
-    knowledge: str,
-    source_name: str = "",
-    demo_label: str = "",
-) -> list[str]:
-    if source in ("demo", "upload"):
-        return _knowledge_preview_lines(knowledge, max_items=5)
-    if source == "website":
-        host = source_name.replace("https://", "").replace("http://", "").split("/")[0]
-        return [f"{host or 'Website'}/", "Publieke bedrijfsinfo", "Contact & openingstijden"]
-    stem = Path(source_name or "document").stem
-    safe = re.sub(r"[^\w.\-]", "_", stem)[:32] or "document"
-    extra = _pick_fact_line(knowledge) or "Bedrijfsgegevens"
-    if len(extra) > 36:
-        extra = extra[:33] + "…"
-    return [f"{safe}.jpg", extra, "Openingstijden & prijzen"]
-
-
-def _owner_sources_for_demo(industry: str) -> list[dict[str, str]]:
-    """Voorbeeld-bronnen die de ondernemer ziet — menu, databases, documenten."""
-    templates: dict[str, list[dict[str, str]]] = {
-        "restaurant": [
-            {"kind": "photo", "name": "Menukaart.jpg", "meta": "Caesar salade €11, pasta carbonara €14,50"},
-            {"kind": "database", "name": "Productdatabase", "meta": "Prijzen, allergenen & voorraad"},
-            {"kind": "database", "name": "Reserveringen DB", "meta": "Tafels & beschikbaarheid"},
-            {"kind": "document", "name": "Huisregels.pdf", "meta": "Groepsreserveringen & terras"},
-            {"kind": "document", "name": "Drankenkaart.pdf", "meta": "Wijn, bier & cocktails"},
-        ],
-        "salon": [
-            {"kind": "photo", "name": "Prijslijst.jpg", "meta": "Knippen dames €35, balayage vanaf €95"},
-            {"kind": "database", "name": "Afspraken DB", "meta": "Agenda & beschikbaarheid"},
-            {"kind": "database", "name": "Klantenbestand", "meta": "Voorkeuren & historie"},
-            {"kind": "document", "name": "Behandeloverzicht.pdf", "meta": "Kleuren & technieken"},
-            {"kind": "document", "name": "Aftercare.docx", "meta": "Verzorgingstips na behandeling"},
-        ],
-        "retail": [
-            {"kind": "photo", "name": "Winkelinfo.jpg", "meta": "Openingstijden & diensten Stationsstraat 12"},
-            {"kind": "database", "name": "Voorraad DB", "meta": "Producten & beschikbaarheid"},
-            {"kind": "database", "name": "Klanten DB", "meta": "Bestellingen & retouren"},
-            {"kind": "document", "name": "Retourbeleid.pdf", "meta": "Voorwaarden & garantie"},
-            {"kind": "document", "name": "Assortiment.docx", "meta": "Categorieën & merken"},
-        ],
-        "industrial": [
-            {"kind": "document", "name": "Onderhoudstarieven.pdf", "meta": "Storingsdienst €95/u · Preventief vanaf €420"},
-            {"kind": "database", "name": "Machinepark DB", "meta": "Serienummers & onderhoudshistorie"},
-            {"kind": "document", "name": "Storingsprotocol.docx", "meta": "Foutcodes & responstijden"},
-        ],
-        "construction": [
-            {"kind": "document", "name": "Prijslijst_installatie.pdf", "meta": "Warmtepomp €8.500–€11.000 incl. plaatsing"},
-            {"kind": "database", "name": "Planning DB", "meta": "Intakes & montageteams"},
-            {"kind": "document", "name": "Garantievoorwaarden.pdf", "meta": "Installatie & service"},
-        ],
-        "logistics": [
-            {"kind": "database", "name": "Zendingen DB", "meta": "Track & trace · ETA per route"},
-            {"kind": "document", "name": "Transporttarieven.pdf", "meta": "Nationaal vanaf €85 · Express vanaf €195"},
-            {"kind": "document", "name": "SLA_levering.docx", "meta": "Levervensters & koeltransport"},
-        ],
-        "financial": [
-            {"kind": "document", "name": "Dienstenoverzicht.pdf", "meta": "Schade-expertise · Belasting · Juridisch"},
-            {"kind": "database", "name": "Dossiers DB", "meta": "Polisnummers & claimstatus"},
-            {"kind": "document", "name": "Checklist_schade.docx", "meta": "Benodigde documenten per claim"},
-        ],
-        "property": [
-            {"kind": "database", "name": "Meldingen DB", "meta": "Spoed & regulier onderhoud per unit"},
-            {"kind": "document", "name": "Beheerhandboek.pdf", "meta": "Spoed binnen 4 uur · VvE-procedures"},
-            {"kind": "document", "name": "Technische_partners.docx", "meta": "Loodgieters · elektriciens · dakwerkers"},
-        ],
-    }
-    default = [
-        {"kind": "photo", "name": "Bedrijfsinfo.jpg", "meta": "Algemene bedrijfsgegevens"},
-        {"kind": "database", "name": "Productdatabase", "meta": "Prijzen & beschikbaarheid"},
-        {"kind": "document", "name": "FAQ.pdf", "meta": "Veelgestelde vragen"},
-    ]
-    return templates.get(industry.lower(), default)
-
-
-def _doc_files_for_industry(industry: str) -> list[str]:
-    files = {
-        "restaurant": ["Menu_2026.pdf", "Allergenenlijst.pdf", "Openingstijden.pdf"],
-        "salon": ["Prijslijst_2026.pdf", "Behandelingen.pdf", "Openingstijden.pdf"],
-        "retail": ["Winkelinfo.pdf", "Diensten.pdf", "Openingstijden.pdf"],
-        "industrial": ["Onderhoudstarieven.pdf", "Storingsprotocol.pdf", "Machinepark.xlsx"],
-        "construction": ["Prijslijst_installatie.pdf", "Garantievoorwaarden.pdf", "Planning.docx"],
-        "logistics": ["Transporttarieven.pdf", "SLA_levering.pdf", "Track_trace_api.pdf"],
-        "financial": ["Dienstenoverzicht.pdf", "Checklist_schade.pdf", "Tarieven_advies.pdf"],
-        "property": ["Beheerhandboek.pdf", "Meldingen_protocol.pdf", "Technische_partners.pdf"],
-    }
-    return files.get(industry.lower(), files["retail"])
 
 
 def _doc_files_for_business_lookup(
@@ -1515,8 +1068,242 @@ def lookup_business_knowledge(
         "opening_hours_today": str(maps.get("opening_hours_today", "") or ""),
         "weekday_descriptions": list(maps.get("weekday_descriptions") or []),
         "google_maps_uri": str(maps.get("google_maps_uri", "") or ""),
+        "place_id": str(maps.get("place_id", "") or ""),
+        "review_url": str(maps.get("review_url", "") or ""),
         "maps_display_name": str(maps.get("display_name", "") or ""),
     }
+
+
+def _inject_demo_step_banners(
+    conversation: list[dict],
+    markers: list[dict],
+) -> list[dict]:
+    """Insert demo_step items so the UI always shows phase labels in the chat."""
+    if not conversation or not markers:
+        return list(conversation)
+    by_index = {int(m["index"]): int(m["step"]) for m in markers}
+    out: list[dict] = []
+    for i, step in enumerate(conversation):
+        if i in by_index:
+            out.append({"type": "demo_step", "step": by_index[i]})
+        out.append(step)
+    return out
+
+
+def _finalize_opening_hours_preview(
+    agent,
+    *,
+    tenant_id: str,
+    industry: str,
+    business_name: str,
+    source: str,
+    base: dict,
+    owner_email: str = "",
+) -> dict:
+    """Google bootstrap + single opening-hours turn — wait for upload."""
+    from platform.preview_agent import run_opening_hours_preview
+
+    agent.reload_docs(tenant_id)
+    preview = run_opening_hours_preview(
+        agent,
+        tenant_id=tenant_id,
+        industry=industry,
+        business_name=business_name,
+        source=source,
+        extra={
+            k: base[k]
+            for k in (
+                "knowledge_preview",
+                "saved_doc",
+                "demo_label",
+                "source_image_url",
+                "source_image_caption",
+                "business_query",
+                "google_maps_hours",
+                "opening_hours_today",
+                "website_host",
+                "knowledge_full",
+                "locale",
+            )
+            if k in base
+        },
+        knowledge=str(base.get("knowledge_full", "")),
+        opening_hours_today=str(base.get("opening_hours_today", "")),
+        weekday_descriptions=list(base.get("weekday_descriptions") or []),
+        google_maps_hours=bool(base.get("google_maps_hours")),
+        website_url=str(base.get("website_url", "")),
+        saved_doc=str(base.get("saved_doc", "")),
+        locale=str(base.get("locale", "nl")),
+    )
+    merged = {**base, **preview}
+    merged.setdefault(
+        "owner_summary",
+        "Klant vroeg openingstijden via WhatsApp. Antwoord op basis van Google/Maps.",
+    )
+    merged.setdefault("appointment_suggestion", "")
+    merged.setdefault("internal_note", "")
+    merged["conversation"] = _inject_demo_step_banners(
+        list(preview.get("conversation") or []),
+        [{"step": 1, "index": 0}],
+    )
+    merged = _attach_owner_email(merged, owner_email=owner_email, business_name=business_name)
+    return _strip_client_email_fields(merged)
+
+
+def _maps_review_context_for_tenant(
+    tenant_id: str,
+    business_name: str,
+    *,
+    city: str = "",
+) -> dict[str, str]:
+    """Google Maps + review link for steps after upload (step 1 data may not be in upload base)."""
+    from platform.business_profile import load_business_profile
+    from platform.google_maps import build_google_review_url, fetch_google_maps_hours
+    from platform.preview_agent import _resolve_review_url
+
+    profile = load_business_profile(tenant_id)
+    docs_dir = BASE_DIR / "docs" / tenant_id
+    google_knowledge = ""
+    if docs_dir.is_dir():
+        google_docs = sorted(docs_dir.glob("google-*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if google_docs:
+            google_knowledge = google_docs[0].read_text(encoding="utf-8")
+
+    maps = fetch_google_maps_hours(business_name, city=city or profile.business_city)
+    review_url = build_google_review_url(
+        place_id=str(maps.get("place_id", "") or ""),
+        google_maps_uri=str(maps.get("google_maps_uri", "") or ""),
+    )
+    if not review_url:
+        review_url = _resolve_review_url(
+            review_url=profile.review_url,
+            extra={
+                "google_maps_uri": str(maps.get("google_maps_uri", "") or ""),
+                "place_id": str(maps.get("place_id", "") or ""),
+            },
+            knowledge=google_knowledge,
+        )
+    return {
+        "google_maps_uri": str(maps.get("google_maps_uri", "") or ""),
+        "place_id": str(maps.get("place_id", "") or ""),
+        "review_url": review_url,
+        "google_knowledge": google_knowledge,
+    }
+
+
+def _finalize_upload_preview(
+    agent,
+    *,
+    tenant_id: str,
+    industry: str,
+    business_name: str,
+    base: dict,
+    owner_email: str = "",
+) -> dict:
+    """After owner upload — one follow-up turn appended to the chat."""
+    from platform.preview_agent import run_upload_follow_up_preview
+
+    agent.reload_docs(tenant_id)
+    preview = run_upload_follow_up_preview(
+        agent,
+        tenant_id=tenant_id,
+        industry=industry,
+        business_name=business_name,
+        extra={
+            k: base[k]
+            for k in ("knowledge_preview", "knowledge_full", "saved_doc", "source_name", "locale")
+            if k in base
+        },
+        source_name=str(base.get("source_name", "")),
+        saved_doc=str(base.get("saved_doc", "")),
+        knowledge=str(base.get("knowledge_full", "")),
+    )
+    merged = {**base, **preview}
+    maps_ctx = _maps_review_context_for_tenant(tenant_id, business_name)
+    merged.setdefault("google_maps_uri", maps_ctx["google_maps_uri"])
+    merged.setdefault("place_id", maps_ctx["place_id"])
+    merged.setdefault("review_url", maps_ctx["review_url"])
+    if maps_ctx.get("google_knowledge"):
+        merged["knowledge_full"] = (
+            f"{maps_ctx['google_knowledge']}\n\n{merged.get('knowledge_full', '')}".strip()
+        )
+    merged.setdefault(
+        "owner_summary",
+        "Klant stelde vervolgvraag na document-upload. Antwoord uit geüploade kennis.",
+    )
+    merged = _attach_owner_email(merged, owner_email=owner_email, business_name=business_name)
+
+    from platform.google_oauth import is_connected
+    from platform.onboarding import get_setup_email
+    from platform.preview_agent import run_calendar_booking_preview
+
+    locale = str(merged.get("locale", "nl"))
+    calendar = run_calendar_booking_preview(
+        agent,
+        tenant_id=tenant_id,
+        industry=industry,
+        business_name=business_name,
+        extra={
+            k: merged[k]
+            for k in ("knowledge_preview", "knowledge_full", "source_name", "locale")
+            if k in merged
+        },
+        knowledge=str(merged.get("knowledge_full", "")),
+        google_connected=is_connected(tenant_id),
+        owner_email=owner_email or get_setup_email(tenant_id),
+    )
+    from platform.preview_agent import run_appointment_reminder_preview
+
+    reminder = run_appointment_reminder_preview(
+        agent,
+        tenant_id=tenant_id,
+        industry=industry,
+        business_name=business_name,
+        extra={
+            **{k: calendar[k] for k in ("appointment_slot", "appointment_service") if k in calendar},
+            "locale": locale,
+        },
+        service_hint=str(calendar.get("appointment_service", "")),
+        appointment_slot=str(calendar.get("appointment_slot", "")),
+    )
+    upload_conv = list(preview.get("conversation") or [])
+    calendar_conv = list(calendar.get("conversation") or [])
+    reminder_conv = list(reminder.get("conversation") or [])
+    from platform.preview_agent import run_google_review_preview
+
+    review = run_google_review_preview(
+        agent,
+        tenant_id=tenant_id,
+        industry=industry,
+        business_name=business_name,
+        extra={
+            "locale": locale,
+            "google_maps_uri": str(merged.get("google_maps_uri", "")),
+            "place_id": str(merged.get("place_id", "")),
+            "knowledge_full": str(merged.get("knowledge_full", "")),
+            "review_url": str(merged.get("review_url", "")),
+            "appointment_service": str(calendar.get("appointment_service", "")),
+        },
+    )
+    review_conv = list(review.get("conversation") or [])
+    merged.update(review)
+    full_conv = upload_conv + calendar_conv + reminder_conv + review_conv
+    merged["conversation"] = _inject_demo_step_banners(
+        full_conv,
+        [
+            {"step": 3, "index": len(upload_conv)},
+            {"step": 4, "index": len(upload_conv) + len(calendar_conv)},
+            {"step": 5, "index": len(upload_conv) + len(calendar_conv) + len(reminder_conv)},
+        ],
+    )
+    merged["late_phase_start"] = len(upload_conv)
+    merged["append"] = True
+    merged["phase"] = "review"
+    merged["owner_summary"] = (
+        "Klant vroeg prijs, plande afspraak, kreeg herinnering en review-verzoek op Google."
+    )
+    merged = _attach_owner_email(merged, owner_email=owner_email, business_name=business_name)
+    return _strip_client_email_fields(merged)
 
 
 def process_business_lookup(
@@ -1528,7 +1315,12 @@ def process_business_lookup(
     city: str = "",
     specialization: str = "",
     owner_email: str = "",
+    agent=None,
+    locale: str = "nl",
 ) -> dict:
+    if agent is None:
+        raise ValueError("agent is required for setup preview")
+
     looked_up = lookup_business_knowledge(
         business_query,
         city=city,
@@ -1538,18 +1330,7 @@ def process_business_lookup(
     display_name = business_name.strip() or looked_up["business_query"]
     safe_name = re.sub(r"[^\w.\-]", "_", looked_up["business_query"])[:40]
     saved = save_knowledge_doc(tenant_id, knowledge, f"google-{safe_name}.md")
-    demo = _business_opening_hours_conversation(
-        knowledge,
-        display_name,
-        industry,
-        opening_hours_today=looked_up.get("opening_hours_today", ""),
-        weekday_descriptions=looked_up.get("weekday_descriptions"),
-    )
-    sector_q = _sector_customer_question(industry, specialization)
-    sector_a = _sector_answer_from_faq(
-        industry, specialization, business_name=display_name
-    )
-    result = {
+    base = {
         "business_name": display_name,
         "source": "business",
         "demo_label": f"Google — {looked_up['business_query']}",
@@ -1557,36 +1338,39 @@ def process_business_lookup(
         "source_image_caption": "",
         "business_query": looked_up["business_query"],
         "knowledge_preview": knowledge[:500] + ("…" if len(knowledge) > 500 else ""),
-        **demo,
-        "sector_question": sector_q,
-        "sector_answer": sector_a,
         "saved_doc": str(saved.relative_to(BASE_DIR)),
         "google_maps_hours": looked_up.get("google_maps_hours", False),
         "opening_hours_today": looked_up.get("opening_hours_today", ""),
+        "weekday_descriptions": list(looked_up.get("weekday_descriptions") or []),
+        "knowledge_full": knowledge,
+        "website_url": looked_up.get("website_url", ""),
+        "google_maps_uri": looked_up.get("google_maps_uri", ""),
+        "place_id": looked_up.get("place_id", ""),
+        "review_url": looked_up.get("review_url", ""),
+        "locale": locale,
     }
-    result = _attach_owner_email(result, owner_email=owner_email, business_name=display_name)
-    result = _apply_preview_ui(
-        result,
-        knowledge=knowledge,
+    if base.get("review_url"):
+        from platform.business_profile import load_business_profile, save_business_profile
+
+        profile = load_business_profile(tenant_id)
+        if not profile.review_url:
+            profile.review_url = str(base["review_url"])
+            save_business_profile(profile)
+    return _finalize_opening_hours_preview(
+        agent,
+        tenant_id=tenant_id,
         industry=industry,
+        business_name=display_name,
         source="business",
-        source_name=looked_up.get("website_url") or looked_up["business_query"],
-        business_query=looked_up["business_query"],
-        search_query=looked_up["search_query"],
-        specialization=specialization,
-        business_city=city,
+        base=base,
+        owner_email=owner_email,
     )
-    return _strip_client_email_fields(result)
 
 
 DEFAULT_BUSINESS_LOOKUP = {
-    "restaurant": ("Restaurant De Gouden Lepel", "Utrecht"),
-    "salon": ("Kapsalon Studio", "Utrecht"),
-    "retail": ("Mode & Meer", "Utrecht"),
-    "services": ("Service Pro", "Utrecht"),
-    "healthcare": ("Tandartspraktijk Centrum", "Utrecht"),
-    "other": ("Bedrijf Centrum", "Utrecht"),
-    "general": ("Restaurant De Gouden Lepel", "Utrecht"),
+    "services": ("InstallPro BV", "Utrecht"),
+    "other": ("TechServ Industrial", "Rotterdam"),
+    "general": ("TechServ Industrial", "Rotterdam"),
     "industrial": ("TechServ Industrial", "Rotterdam"),
     "construction": ("InstallPro BV", "Utrecht"),
     "logistics": ("FastRoute Logistics", "Antwerpen"),
@@ -1624,24 +1408,6 @@ def _web_search_context(
             "show": True,
         }
     templates = {
-        "restaurant": {
-            "query": f"weersverwachting {loc} vrijdag avond terras",
-            "searching": "Weerinfo voor de horeca opgezocht…",
-            "done": "Weersverwachting toegevoegd",
-            "show": True,
-        },
-        "salon": {
-            "query": f"populaire kapseltrends {loc} 2026",
-            "searching": "Actuele trends in jouw branche opgezocht…",
-            "done": "Trendinfo toegevoegd",
-            "show": True,
-        },
-        "retail": {
-            "query": f"koopzondag en winkelendrag {loc}",
-            "searching": "Sectorinfo voor retail opgezocht…",
-            "done": "Actuele sectorinfo toegevoegd",
-            "show": True,
-        },
         "industrial": {
             "query": f"industriële onderhoudscontracten trends {loc}",
             "searching": "Branche-info maintenance opgezocht…",
@@ -1672,8 +1438,14 @@ def _web_search_context(
             "done": "Beheerinfo toegevoegd",
             "show": True,
         },
+        "services": {
+            "query": f"sector trends veelgestelde vragen {loc}",
+            "searching": "Branche-info opgezocht…",
+            "done": "Sectorinfo toegevoegd",
+            "show": True,
+        },
     }
-    return templates.get(industry.lower(), templates["retail"]).copy()
+    return templates.get(industry.lower(), templates["industrial"]).copy()
 
 
 def _sector_customer_question(industry: str, specialization: str) -> str:
@@ -1733,233 +1505,10 @@ def _sector_answer_from_web(
     )
 
 
-def _business_opening_hours_conversation(
-    knowledge: str,
-    business_name: str,
-    industry: str,
-    *,
-    opening_hours_today: str = "",
-    weekday_descriptions: list[str] | None = None,
-) -> dict[str, str]:
-    """Vast openingsuren-gesprek voor Google/business preview."""
-    from platform.commercial_tone import commercial_opening_answer, is_closed_hours_message
-
-    question = "Hoe laat zijn jullie vandaag open?"
-    name = business_name.strip() or "ons"
-    today = (opening_hours_today or _pick_today_hours_line(knowledge) or "").strip()
-
-    if today or _pick_hours_line(knowledge):
-        if today and not today.lower().startswith("vandaag"):
-            if is_closed_hours_message(today):
-                today = today if today.lower().startswith("vandaag") else f"Vandaag zijn we gesloten."
-            else:
-                today = f"Vandaag zijn we open: {today.rstrip('.')}."
-        answer = commercial_opening_answer(
-            today_summary=today,
-            business_name=name,
-            industry=industry,
-            weekday_descriptions=weekday_descriptions,
-        )
-        fact = today or "Openingstijden vandaag"
-    else:
-        answer = _opening_hours_fallback_answer(name, industry)
-        fact = "Openingstijden vandaag"
-    source = "Google Maps" if "google maps" in knowledge.lower() else "Google"
-    summary = (
-        f"Klant vroeg naar openingstijden. Bot antwoordde op basis van {source}. "
-        f"Lead: warm — follow-up aanbevolen."
-    )
-    appointment = _default_appointment(industry, fact)
-    return {
-        "sample_question": question,
-        "sample_answer": answer,
-        "fact_used": fact,
-        "owner_summary": summary,
-        "appointment_suggestion": appointment,
-        "internal_note": _internal_note(summary, appointment),
-    }
-
-
-def _sector_bonus_for_industry(industry: str, specialization: str = "") -> dict[str, str]:
-    """Fallback sector copy for demo/website sources (not business lookup)."""
-    from platform.commercial_tone import commercialize_sector_answer
-    from platform.industry_faqs import pick_sector_faq
-
-    faq = pick_sector_faq(industry, specialization)
-    thanks = {
-        "restaurant": "Wat fijn, dank je wel! Tot snel! 🙏",
-        "salon": "Super, dank je wel! 😊",
-        "retail": "Heel erg bedankt! 🙌",
-        "healthcare": "Dank je wel, fijn om te weten! 🙏",
-    }.get(industry.lower(), "Dank je wel, dat waardeer ik enorm! 😊")
-    return {
-        "sector_question": faq["question"],
-        "sector_answer": commercialize_sector_answer(faq["answer"], industry),
-        "customer_thanks": thanks,
-    }
-
-
-def _quick_actions_for_industry(industry: str) -> list[str]:
-    actions = {
-        "restaurant": ["Reserveren", "Menu bekijken", "Route"],
-        "salon": ["Afspraak maken", "Prijzen", "Bellen"],
-        "retail": ["Openingstijden", "Route", "Assortiment"],
-    }
-    return actions.get(industry.lower(), ["Meer info", "Contact", "Website"])
-
-
-def _response_tags_for_demo(demo: dict, industry: str) -> list[str]:
-    fact = demo.get("fact_used", "")
-    tags: list[str] = []
-    if "€" in fact or "€" in demo.get("sample_answer", ""):
-        tags.append("Prijs bevestigd")
-    if industry.lower() in ("restaurant", "salon", "healthcare", "services"):
-        tags.append("Afspraak mogelijk")
-    if industry.lower() == "restaurant":
-        tags.append("Terras / menu")
-    elif industry.lower() == "salon":
-        tags.append("Behandeling beschikbaar")
-    else:
-        tags.append("Info uit bron")
-    if not tags:
-        tags = ["Antwoord op basis van jouw info"]
-    return tags[:3]
-
-
 def _strip_client_email_fields(result: dict) -> dict:
     for key in ("email_body", "email_subject", "email_to", "email_sent", "email_note"):
         result.pop(key, None)
     return result
-
-
-def _apply_preview_ui(
-    result: dict,
-    *,
-    knowledge: str,
-    industry: str,
-    source: str,
-    source_name: str = "",
-    demo_label: str = "",
-    website_url: str = "",
-    business_query: str = "",
-    search_query: str = "",
-    specialization: str = "",
-    business_city: str = "",
-) -> dict:
-    result["doc_files"] = _doc_files_for_industry(industry)
-    result["doc_items"] = _doc_items_for_source(
-        source=source,
-        knowledge=knowledge,
-        source_name=source_name or website_url,
-        demo_label=demo_label,
-    )
-    if source == "demo":
-        result["doc_searching"] = "Documenten worden geraadpleegd…"
-        result["doc_done"] = "Menu & documenten gelezen"
-        result["doc_note"] = "Alleen zichtbaar voor jouw team — klanten zien nooit je bronbestanden."
-        result["doc_show_lock"] = True
-        result["progress_label"] = "Vraag → documenten → web → antwoord → dank"
-        result["show_owner_sources"] = True
-        result["owner_sources_title"] = "Documenten worden geraadpleegd…"
-        result["owner_sources_note"] = result["doc_note"]
-        result["owner_sources"] = _owner_sources_for_demo(industry)
-    elif source == "business":
-        result["preview_flow"] = "business"
-        result["show_customer_image"] = False
-        maps = bool(result.get("google_maps_hours"))
-        biz = result.get("business_name") or business_query or ""
-        if maps:
-            result["doc_searching"] = "Google Maps wordt geraadpleegd…"
-            result["doc_done"] = "Openingstijden via Google Maps opgehaald"
-        else:
-            result["doc_searching"] = "Google wordt geraadpleegd…"
-            result["doc_done"] = "Bedrijfsinfo via Google opgehaald"
-        result["doc_files"] = _doc_files_for_business_lookup(
-            google_maps=maps,
-            business_name=biz,
-            website_url=website_url,
-        )
-        result["doc_note"] = (
-            "Publieke online bronnen — geen geüploade documenten van de ondernemer."
-        )
-        result["doc_show_lock"] = True
-        result["show_owner_sources"] = False
-        result["owner_sources"] = []
-        result["show_web_search"] = False
-        result["show_sector_web_search"] = False
-        result["show_sector_internal"] = True
-        result["sector_found_message"] = "Antwoord gevonden in sector-database"
-        result["sector_doc_files"] = ["Sector FAQ", "Veelgestelde vragen", "Branche-info"]
-        result["sector_doc_searching"] = "Sector-informatie wordt opgehaald…"
-        result["sector_doc_done"] = "Sector-database geraadpleegd"
-        result["progress_label"] = "Google → antwoord → winkelvraag → sector → afscheid"
-        result["customer_thanks"] = ""
-    elif source == "website":
-        result["doc_searching"] = "Website wordt gelezen…"
-        result["doc_done"] = f"Website gelezen — {(website_url or source_name).replace('https://', '').replace('http://', '').split('/')[0]}"
-        result["doc_note"] = "Info komt rechtstreeks van de opgegeven URL."
-        result["doc_show_lock"] = True
-        result["show_owner_sources"] = True
-        result["owner_sources_title"] = "AppAssist doorzoekt jouw website"
-        result["owner_sources_note"] = "Alleen jij ziet dit — klanten zien geen URL of bronbestanden."
-        host = (website_url or source_name).replace("https://", "").replace("http://", "").split("/")[0]
-        result["owner_sources"] = [
-            {"kind": "document", "name": f"{host}/", "meta": "Homepage & bedrijfsinfo"},
-            {"kind": "document", "name": "Contact & openingstijden", "meta": "Uit website gehaald"},
-            {"kind": "database", "name": "Productdatabase", "meta": "Prijzen & beschikbaarheid"},
-        ]
-        result["progress_label"] = "Klant vraagt → website → antwoord"
-    else:
-        result["preview_flow"] = "upload"
-        result["show_customer_image"] = False
-        result["show_web_search"] = False
-        result["show_sector_web_search"] = False
-        result["sector_question"] = ""
-        result["sector_answer"] = ""
-        result["customer_thanks"] = ""
-        uploaded_label = source_name or "Intern document.jpg"
-        result["upload_vision_message"] = ""
-        result["doc_searching"] = "Geüpload document wordt gelezen…"
-        result["doc_done"] = "Document gelezen"
-        result["doc_found_message"] = "Antwoord gevonden in je geüpload document."
-        result["doc_note"] = ""
-        result["doc_show_lock"] = True
-        result["doc_files"] = [uploaded_label]
-        result["progress_label"] = "Document → vraag → antwoord"
-        result["show_owner_sources"] = False
-        result["owner_sources"] = []
-    if source in ("demo", "website"):
-        web = _web_search_context(industry, specialization=specialization, city=business_city)
-        sector = _sector_bonus_for_industry(industry, specialization=specialization)
-        result["show_web_search"] = bool(web.get("show"))
-        result["web_query"] = str(web.get("query", ""))
-        result["web_searching"] = str(web.get("searching", ""))
-        result["web_done"] = str(web.get("done", ""))
-        result["sector_question"] = sector["sector_question"]
-        result["sector_answer"] = sector["sector_answer"]
-        result["customer_thanks"] = sector["customer_thanks"]
-        result["show_customer_image"] = False
-        result["preview_flow"] = source
-    if source == "demo":
-        result["preview_flow"] = "demo"
-        result["show_customer_image"] = False
-    result.setdefault("preview_flow", source)
-    result.setdefault("show_customer_image", False)
-    result.setdefault("show_sector_web_search", False)
-    result.setdefault("show_sector_internal", False)
-    result["confirm_customer"] = "Ja graag, heel erg bedankt! 🙏"
-    result["response_tags"] = _response_tags_for_demo(result, industry)
-    result["progress_steps"] = 5
-    result["progress_step"] = 4
-    result["customer_name"] = "Sophie"
-    from platform.preview_conversation import attach_preview_conversation
-
-    return attach_preview_conversation(
-        result,
-        source=source,
-        industry=industry,
-        business_name=result.get("business_name", ""),
-    )
 
 
 def _attach_owner_email(result: dict, *, owner_email: str, business_name: str) -> dict:
@@ -1999,7 +1548,12 @@ def process_knowledge_upload(
     source_name: str,
     owner_email: str = "",
     persist: bool = True,
+    agent=None,
+    locale: str = "nl",
 ) -> dict:
+    if agent is None:
+        raise ValueError("agent is required for setup preview")
+
     display_name = _display_business_name(business_name, source_name)
     if not (LLM_PROVIDER == "ollama" or OPENAI_API_KEY):
         raise RuntimeError("Geen vision-model beschikbaar.")
@@ -2012,9 +1566,8 @@ def process_knowledge_upload(
             raise RuntimeError(
                 "PDF bevat te weinig leesbare tekst. Upload een doorzoekbare PDF of een foto."
             )
-        demo = generate_demo_conversation_fast(knowledge, display_name, industry)
     else:
-        knowledge, demo = _extract_and_demo_from_image(
+        knowledge, _ = _extract_and_demo_from_image(
             image_path,
             business_name=display_name,
             industry=industry,
@@ -2023,289 +1576,21 @@ def process_knowledge_upload(
     saved = None
     if persist:
         saved = save_knowledge_doc(tenant_id, knowledge, source_name)
-    result = {
+    base = {
         "business_name": display_name,
         "source": "upload",
         "knowledge_preview": knowledge[:500] + ("…" if len(knowledge) > 500 else ""),
-        **demo,
+        "knowledge_full": knowledge,
+        "source_name": source_name,
+        "locale": locale,
     }
     if saved:
-        result["saved_doc"] = str(saved.relative_to(BASE_DIR))
-    result = _attach_owner_email(result, owner_email=owner_email, business_name=display_name)
-    result = _apply_preview_ui(
-        result,
-        knowledge=knowledge,
+        base["saved_doc"] = str(saved.relative_to(BASE_DIR))
+    return _finalize_upload_preview(
+        agent,
+        tenant_id=tenant_id,
         industry=industry,
-        source="upload",
-        source_name=source_name,
+        business_name=display_name,
+        base=base,
+        owner_email=owner_email,
     )
-    return _strip_client_email_fields(result)
-
-
-DEMO_SAMPLES: list[dict[str, str]] = [
-    {
-        "id": "restaurant-menu",
-        "industry": "restaurant",
-        "label": "Restaurant menu",
-        "icon": "🍽️",
-        "description": "Menukaart met gerechten & prijzen",
-        "image_url": "demo/restaurant-menu.svg",
-        "image_caption": "Menukaart — Caesar salade €11, pasta carbonara €14,50 & meer",
-        "knowledge": """## Menu
-- Tomatensoep — €6,50
-- Caesar salade — €11,00
-- Pasta carbonara — €14,50
-- Vega burger — €13,00
-- Biefstuk 200g — €24,00
-- Dame blanche — €7,00
-
-## Openingstijden
-Ma–Do 12:00–22:00 · Vr–Za 12:00–23:00 · Zo gesloten
-
-## Info
-Terras · Groepen vanaf 6 personen reserveren · Alle gangen bereiden we vers""",
-    },
-    {
-        "id": "salon-prices",
-        "industry": "salon",
-        "label": "Kapsalon prijslijst",
-        "icon": "💇",
-        "description": "Knippen, kleuren & behandelingen",
-        "image_url": "demo/salon-prices.svg",
-        "image_caption": "Prijslijst — knippen dames €35, balayage vanaf €95",
-        "knowledge": """## Prijzen
-- Knippen dames — €35
-- Knippen heren — €28
-- Wassen & föhnen — €15
-- Balayage — vanaf €95
-- Highlights — vanaf €75
-- Brow lamination — €45
-
-## Openingstijden
-Di–Vr 9:00–18:00 · Za 9:00–17:00 · Ma & Zo gesloten
-
-## Info
-Afspraak via WhatsApp of telefoon · 15 min gratis parkeren""",
-    },
-    {
-        "id": "shop-hours",
-        "industry": "retail",
-        "label": "Winkel & diensten",
-        "icon": "🛍️",
-        "description": "Openingstijden & service-info",
-        "image_url": "demo/shop-hours.svg",
-        "image_caption": "Winkelinfo — openingstijden & diensten, Stationsstraat 12",
-        "knowledge": """## Openingstijden
-Ma–Wo 10:00–18:00 · Do 10:00–21:00 (koopavond)
-Vr 10:00–18:00 · Za 10:00–17:00 · Zo 12:00–17:00
-
-## Diensten
-- Gratis maatadvies
-- Cadeauverpakking
-- Online bestellen, ophalen in 2 uur
-- Retour binnen 30 dagen
-
-## Contact
-Stationsstraat 12, Utrecht · Parkeren 1e uur gratis""",
-    },
-    {
-        "id": "industrial-service",
-        "industry": "industrial",
-        "label": "Industriële service",
-        "icon": "⚙️",
-        "description": "Onderhoudstarieven & storingsdienst",
-        "image_url": "demo/industrial-service.svg",
-        "image_caption": "Onderhoudstarieven — storingsdienst €95/u, preventief vanaf €420",
-        "knowledge": """## Onderhoudstarieven
-- Storingsdienst (werkdag) — €95/u excl. onderdelen
-- Preventief onderhoud CNC — vanaf €420 per beurt
-- Noodinterventie 24/7 — €145/u
-
-## Responstijden
-Werkdagen: binnen 4 uur · Weekend: binnen 8 uur
-
-## Contact
-Industrieweg 14, Rotterdam · storingslijn 24/7""",
-    },
-    {
-        "id": "construction-install",
-        "industry": "construction",
-        "label": "Installatie & bouw",
-        "icon": "🏗️",
-        "description": "Warmtepomp & installatieprijzen",
-        "image_url": "demo/construction-install.svg",
-        "image_caption": "Installatieprijzen — warmtepomp €8.500–€11.000 incl. plaatsing",
-        "knowledge": """## Installatieprijzen
-- Warmtepomp lucht-water (5–8 kW) — €8.500–€11.000 incl. plaatsing
-- CV-ketel vervangen — vanaf €2.950
-- Airco split-unit — vanaf €1.450 per binnenunit
-
-## Planning
-Intake binnen 5 werkdagen · Plaatsing binnen 3 weken na akkoord
-
-## Contact
-Installatieweg 8, Utrecht · Ma–Vr 7:30–17:30""",
-    },
-    {
-        "id": "logistics-transport",
-        "industry": "logistics",
-        "label": "Transport & logistiek",
-        "icon": "🚚",
-        "description": "Transporttarieven & levertijden",
-        "image_url": "demo/logistics-transport.svg",
-        "image_caption": "Transport — nationaal vanaf €85, express same-day vanaf €195",
-        "knowledge": """## Transporttarieven
-- Nationaal pallet (tot 800 kg) — vanaf €85
-- Koeltransport — vanaf €120 per pallet
-- Express same-day (BE) — vanaf €195
-
-## Levering
-Ma–Za · Track & trace op elke zending
-
-## Contact
-Logistiekpark 22, Antwerpen · dispatch 24/7""",
-    },
-    {
-        "id": "financial-advisory",
-        "industry": "financial",
-        "label": "Financieel & verzekeringen",
-        "icon": "📋",
-        "description": "Schade, belasting & juridisch advies",
-        "image_url": "demo/financial-advisory.svg",
-        "image_caption": "Diensten — schade-expertise, belastingaangifte vanaf €650",
-        "knowledge": """## Dienstverlening
-- Schade-expertise — binnen 5 werkdagen
-- Belastingaangifte MKB — vanaf €650 per jaar
-- Juridisch advies arbeidsrecht — €185/u
-
-## Documenten
-Polis, schadeformulier, facturen en foto's via WhatsApp
-
-## Contact
-Keizersgracht 120, Amsterdam · Ma–Vr 9:00–18:00""",
-    },
-    {
-        "id": "property-management",
-        "industry": "property",
-        "label": "Vastgoedbeheer",
-        "icon": "🏢",
-        "description": "Meldingen & technisch beheer",
-        "image_url": "demo/property-management.svg",
-        "image_caption": "Beheer — spoed binnen 4 u, VvE-coördinatie",
-        "knowledge": """## Meldingen
-- Spoed onderhoud — binnen 4 uur
-- Regulier onderhoud — binnen 3 werkdagen
-- Huurdersportaal via WhatsApp
-
-## Diensten
-Technisch beheer · Servicekosten · VvE-coördinatie
-
-## Contact
-Beheerstraat 5, Den Haag · storingslijn 24/7""",
-    },
-]
-
-
-def list_demo_samples(industry: str = "general") -> list[dict[str, str]]:
-    demo_id = INDUSTRY_TO_DEMO.get(industry.lower(), INDUSTRY_TO_DEMO["general"])
-    sample = get_demo_sample(demo_id) or DEMO_SAMPLES[0]
-    return [
-        {
-            "id": sample["id"],
-            "label": sample["label"],
-            "icon": sample["icon"],
-            "description": sample["description"],
-            "image_url": sample.get("image_url", ""),
-            "image_caption": sample.get("image_caption", ""),
-            "preview_lines": _knowledge_preview_lines(sample["knowledge"], max_items=3),
-        }
-    ]
-
-
-def get_demo_sample(demo_id: str) -> dict[str, str] | None:
-    return next((s for s in DEMO_SAMPLES if s["id"] == demo_id), None)
-
-
-def process_demo_sample(
-    *,
-    tenant_id: str,
-    demo_id: str,
-    business_name: str,
-    industry: str,
-    owner_email: str = "",
-) -> dict:
-    sample = get_demo_sample(demo_id)
-    if not sample:
-        raise ValueError("Onbekend voorbeeld")
-
-    display_name = business_name.strip() or "jouw bedrijf"
-    knowledge = sample["knowledge"]
-    saved = save_knowledge_doc(tenant_id, knowledge, f"demo-{demo_id}.md")
-    demo = generate_demo_conversation(knowledge, display_name, industry)
-    result = {
-        "business_name": display_name,
-        "source": "demo",
-        "demo_label": sample["label"],
-        "source_image_url": sample.get("image_url", ""),
-        "source_image_caption": sample.get("image_caption", ""),
-        "knowledge_preview": knowledge[:500] + ("…" if len(knowledge) > 500 else ""),
-        **demo,
-        "saved_doc": str(saved.relative_to(BASE_DIR)),
-    }
-    result = _attach_owner_email(result, owner_email=owner_email, business_name=display_name)
-    result = _apply_preview_ui(
-        result,
-        knowledge=knowledge,
-        industry=industry,
-        source="demo",
-        demo_label=sample["label"],
-    )
-    return _strip_client_email_fields(result)
-
-
-def process_website_preview(
-    *,
-    tenant_id: str,
-    business_name: str,
-    industry: str,
-    website_url: str,
-    owner_email: str = "",
-) -> dict:
-    raw = website_url.strip()
-    url = raw if raw.startswith(("http://", "https://")) else f"https://{raw}"
-
-    fetched = fetch_website_knowledge(url)
-    knowledge = fetched["knowledge"]
-    final_url = fetched["final_url"]
-    host = final_url.replace("https://", "").replace("http://", "").split("/")[0]
-
-    display_name = business_name.strip() or "jouw bedrijf"
-    saved = save_knowledge_doc(
-        tenant_id,
-        f"{knowledge}\n\n## Website\n{final_url}",
-        f"website-{host}.md",
-    )
-    demo = generate_demo_conversation(knowledge, display_name, industry)
-    og_image = fetched.get("og_image") or ""
-    caption = f"Website — {host}"
-    result = {
-        "business_name": display_name,
-        "source": "website",
-        "demo_label": caption,
-        "source_image_url": og_image,
-        "source_image_caption": caption if og_image else "",
-        "website_host": host,
-        "knowledge_preview": knowledge[:500] + ("…" if len(knowledge) > 500 else ""),
-        **demo,
-        "saved_doc": str(saved.relative_to(BASE_DIR)),
-    }
-    result = _attach_owner_email(result, owner_email=owner_email, business_name=display_name)
-    result = _apply_preview_ui(
-        result,
-        knowledge=knowledge,
-        industry=industry,
-        source="website",
-        source_name=final_url,
-        website_url=final_url,
-    )
-    return _strip_client_email_fields(result)

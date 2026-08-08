@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 FAQ_PATH = BASE_DIR / "data" / "industry_faqs.json"
 
 INDUSTRY_ALIASES = {
-    "general": "services",
-    "other": "services",
-    "beauty salon": "salon",
+    "general": "construction",
+    "other": "construction",
+    "services": "construction",
 }
 
 
@@ -26,15 +26,19 @@ def _normalize_industry(industry: str) -> str:
 
 
 def resolve_faq_industry(industry: str, specialization: str = "") -> str:
-    """Pick FAQ bucket from specialization first, then profile industry."""
+    """Pick FAQ bucket — explicit B2B industry wins over specialization inference."""
+    normalized = _normalize_industry(industry)
+    b2b = {"industrial", "construction", "logistics", "financial", "property"}
+    if normalized in b2b:
+        return normalized
     spec = (specialization or "").strip()
     if spec:
         from platform.onboarding import infer_industry_from_specialization
 
-        inferred = infer_industry_from_specialization(spec)
-        if inferred != "services" or _normalize_industry(industry) == "services":
-            return _normalize_industry(inferred)
-    return _normalize_industry(industry)
+        inferred = _normalize_industry(infer_industry_from_specialization(spec))
+        if inferred in b2b:
+            return inferred
+    return normalized if normalized in b2b else "construction"
 
 
 @lru_cache(maxsize=1)
@@ -68,9 +72,7 @@ def pick_sector_faq(industry: str, specialization: str = "") -> dict[str, str]:
     """Best-matching FAQ entry for preview and seed docs."""
     industry_key = resolve_faq_industry(industry, specialization)
     spec_lower = (specialization or "").strip().lower()
-    from platform.kaggle_faqs import merged_faq_entries
-
-    entries = merged_faq_entries(industry_key)
+    entries = _load_faq_data().get(industry_key, [])
     if not entries:
         entries = _load_faq_data().get("services", [])
 
@@ -104,9 +106,7 @@ def list_sector_faqs(industry: str, specialization: str = "", *, limit: int = 5)
     """Ordered FAQ list for seed docs (best match first)."""
     industry_key = resolve_faq_industry(industry, specialization)
     spec_lower = (specialization or "").strip().lower()
-    from platform.kaggle_faqs import merged_faq_entries
-
-    entries = merged_faq_entries(industry_key)
+    entries = _load_faq_data().get(industry_key, [])
     if not entries:
         entries = _load_faq_data().get("services", [])
     if not entries:

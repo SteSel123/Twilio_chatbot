@@ -121,7 +121,7 @@ def fetch_google_maps_hours(
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": api_key,
                 "X-Goog-FieldMask": (
-                    "places.displayName,places.formattedAddress,"
+                    "places.id,places.displayName,places.formattedAddress,"
                     "places.regularOpeningHours,places.currentOpeningHours,"
                     "places.googleMapsUri,places.websiteUri,places.businessStatus"
                 ),
@@ -144,6 +144,8 @@ def fetch_google_maps_hours(
     address = place.get("formattedAddress", "")
     maps_uri = place.get("googleMapsUri", "")
     website_uri = place.get("websiteUri", "")
+    raw_place_id = str(place.get("id") or "")
+    place_id = raw_place_id.split("/", 1)[-1] if raw_place_id else ""
 
     regular = place.get("regularOpeningHours") or {}
     current = place.get("currentOpeningHours") or {}
@@ -167,10 +169,25 @@ def fetch_google_maps_hours(
         "address": address,
         "google_maps_uri": maps_uri,
         "website_uri": website_uri,
+        "place_id": place_id,
+        "review_url": build_google_review_url(place_id=place_id, google_maps_uri=maps_uri),
         "weekday_descriptions": weekday_descriptions,
         "opening_hours_today": today_summary,
         "open_now": open_now,
     }
+
+
+def build_google_review_url(*, place_id: str = "", google_maps_uri: str = "") -> str:
+    """Prefer Google's write-review URL; fall back to Maps place page."""
+    pid = (place_id or "").strip()
+    if pid.startswith("places/"):
+        pid = pid.split("/", 1)[-1]
+    if pid:
+        return f"https://search.google.com/local/writereview?placeid={pid}"
+    uri = (google_maps_uri or "").strip()
+    if uri.startswith("http"):
+        return uri
+    return ""
 
 
 def message_needs_google_maps(message: str) -> bool:

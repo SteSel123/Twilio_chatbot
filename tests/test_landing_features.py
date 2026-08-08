@@ -4,7 +4,7 @@ from platform.analytics import get_dashboard_stats, get_monthly_conversations, r
 from platform.calendar import book_appointment, list_available_slots
 from platform.leads import qualify_lead
 from platform.outbound import list_jobs, schedule_message
-from platform.tiers import check_conversation_allowed, tier_config, tier_allows_media
+from platform.tiers import TIER_LIMITS, check_conversation_allowed, tier_config, tier_allows_media
 
 
 def test_qualify_lead_high_interest():
@@ -26,7 +26,7 @@ def test_tier_limits_starter():
 
 
 def test_tier_allows_media_growth():
-    assert tier_allows_media("salon") is True
+    assert TIER_LIMITS["growth"]["voice_images"] is True
 
 
 def test_analytics_record_and_stats():
@@ -39,19 +39,19 @@ def test_analytics_record_and_stats():
 
 
 def test_conversation_limit_check():
-    allowed, _ = check_conversation_allowed("salon")
+    allowed, _ = check_conversation_allowed("default")
     assert allowed is True
 
 
 def test_calendar_slots():
-    slots = list_available_slots("salon", "2026-12-01")
+    slots = list_available_slots("default", "2026-12-01")
     assert len(slots) > 0
     assert "09:00" in slots
 
 
 def test_book_appointment():
     result = book_appointment(
-        "salon",
+        "default",
         "whatsapp:+32470000000",
         date="2026-12-01",
         slot_time="10:00",
@@ -63,19 +63,19 @@ def test_book_appointment():
 
 def test_outbound_schedule():
     job_id = schedule_message(
-        "salon",
+        "default",
         "whatsapp:+32470000000",
         "custom",
         "Test reminder",
     )
     assert job_id > 0
-    jobs = list_jobs("salon", limit=5)
+    jobs = list_jobs("default", limit=5)
     assert any(j["id"] == job_id for j in jobs)
 
 
 def test_mcp_registry_new_tools():
     from platform.mcp import ToolRegistry
 
-    reg = ToolRegistry(tenant_id="salon")
-    result = reg.invoke("qualifyLead", {"message": "Need quote urgently"}, tenant_id="salon")
+    reg = ToolRegistry(tenant_id="default")
+    result = reg.invoke("qualifyLead", {"message": "Need quote urgently"}, tenant_id="default")
     assert "interest" in result

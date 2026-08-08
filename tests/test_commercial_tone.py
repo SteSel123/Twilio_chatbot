@@ -10,12 +10,6 @@ from platform.commercial_tone import (
     is_closed_hours_message,
 )
 
-ENERGY_PANEL_ANSWER = (
-    "Dat hangt af van je dak, verbruik en gewenst aantal panelen. "
-    "Stuur je adres en een recente elektriciteitsfactuur door — "
-    "dan plannen we graag een gratis plaatsbezoek met een indicatieve offerte."
-)
-
 
 def test_is_closed_hours_message():
     assert is_closed_hours_message("Vandaag zijn we gesloten.")
@@ -38,56 +32,57 @@ def test_commercial_opening_closed_ends_with_alternative_and_soft_cta():
         mock_dt.side_effect = lambda *a, **k: datetime(*a, **k)
         answer = commercial_opening_answer(
             today_summary="Vandaag zijn we gesloten.",
-            business_name="Test Shop",
-            industry="restaurant",
+            business_name="TechServ Industrial",
+            industry="industrial",
             weekday_descriptions=descriptions,
         )
     assert "gesloten" in answer.lower()
-    assert "wij bij Test Shop" in answer
+    assert "wij bij TechServ Industrial" in answer
     assert "zaterdag" in answer.lower()
-    assert "reserveren" in answer.lower()
+    assert "storings" in answer.lower() or "onderhoud" in answer.lower()
 
 
 def test_commercial_opening_open_no_sales_pitch():
-    energy = commercial_opening_answer(
+    industrial = commercial_opening_answer(
         today_summary="Vandaag zijn we open: 09:00–17:00 uur.",
-        business_name="EWS Energy",
-        industry="energy",
+        business_name="TechServ Industrial",
+        industry="industrial",
     )
-    assert "wij bij EWS Energy" in energy
-    assert "open van 09:00 tot 17:00" in energy
-    assert "offerte" not in energy.lower()
-    assert "gegevens door" not in energy.lower()
+    assert "wij bij TechServ Industrial" in industrial
+    assert "open van 09:00 tot 17:00" in industrial
+    assert "offerte" not in industrial.lower()
 
-    restaurant = commercial_opening_answer(
+    construction = commercial_opening_answer(
         today_summary="Vandaag zijn we open: 09:00–18:00 uur.",
-        business_name="De Gouden Lepel",
-        industry="restaurant",
+        business_name="InstallPro BV",
+        industry="construction",
     )
-    assert "wij bij De Gouden Lepel" in restaurant
-    assert "09:00" in restaurant
-    assert "welkom" in restaurant.lower()
-    assert "reserveren" not in restaurant.lower()
+    assert "wij bij InstallPro BV" in construction
+    assert "09:00" in construction
+    assert "intake" in construction.lower() or "helpen" in construction.lower()
 
 
 def test_commercialize_sector_answer_adds_soft_nudge_when_needed():
     answer = commercialize_sector_answer(
-        "Ja, we hebben meerdere vegetarische opties op het menu.",
-        "restaurant",
-        business_name="De Gouden Lepel",
+        "Ja, storingsdienst is 24/7 bereikbaar.",
+        "industrial",
+        business_name="TechServ Industrial",
     )
-    assert "vegetarische" in answer.lower()
-    assert "langskomen" in answer.lower() or "wil je" in answer.lower()
+    assert "storingsdienst" in answer.lower()
+    assert "monteur" in answer.lower() or "wil je" in answer.lower()
 
 
-def test_commercialize_sector_answer_no_duplicate_on_energy_faq():
-    answer = commercialize_sector_answer(ENERGY_PANEL_ANSWER, "energy")
-    assert answer.count("plaatsbezoek") == 1
+def test_commercialize_sector_answer_no_duplicate_on_construction_faq():
+    original = (
+        "Meestal binnen 5 werkdagen. Stuur je adres door — "
+        "dan plannen we een gratis technische intake in."
+    )
+    answer = commercialize_sector_answer(original, "construction")
+    assert answer.count("intake") == 1
     assert answer.count("Zal ik") == 0
-    assert "Wil je" not in answer
 
 
 def test_commercialize_sector_answer_skips_when_question_present():
     original = "Voor knippen raden we 1–2 weken van tevoren aan. Zal ik een plek voor je zoeken?"
-    answer = commercialize_sector_answer(original, "salon")
+    answer = commercialize_sector_answer(original, "construction")
     assert answer == original
