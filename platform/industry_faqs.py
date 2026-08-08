@@ -68,8 +68,11 @@ def pick_sector_faq(industry: str, specialization: str = "") -> dict[str, str]:
     """Best-matching FAQ entry for preview and seed docs."""
     industry_key = resolve_faq_industry(industry, specialization)
     spec_lower = (specialization or "").strip().lower()
-    data = _load_faq_data()
-    entries = data.get(industry_key) or data.get("services", [])
+    from platform.kaggle_faqs import merged_faq_entries
+
+    entries = merged_faq_entries(industry_key)
+    if not entries:
+        entries = _load_faq_data().get("services", [])
 
     if not entries:
         return {
@@ -101,7 +104,11 @@ def list_sector_faqs(industry: str, specialization: str = "", *, limit: int = 5)
     """Ordered FAQ list for seed docs (best match first)."""
     industry_key = resolve_faq_industry(industry, specialization)
     spec_lower = (specialization or "").strip().lower()
-    entries = _load_faq_data().get(industry_key) or _load_faq_data().get("services", [])
+    from platform.kaggle_faqs import merged_faq_entries
+
+    entries = merged_faq_entries(industry_key)
+    if not entries:
+        entries = _load_faq_data().get("services", [])
     if not entries:
         picked = pick_sector_faq(industry, specialization)
         return [{"question": picked["question"], "answer": picked["answer"]}]

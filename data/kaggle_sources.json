@@ -1,0 +1,68 @@
+{
+  "industrial": {
+    "datasets": [
+      {
+        "slug": "jvachier/industrial-maintenance-synthetic-dataset",
+        "file_glob": "*maintenance*.csv",
+        "type": "maintenance_orders",
+        "max_rows": 200
+      },
+      {
+        "slug": "datasetengineer/logistics-vehicle-maintenance-history-dataset",
+        "file_glob": "*maintenance*.csv",
+        "type": "fleet_maintenance",
+        "max_rows": 150,
+        "vertical_map": "industrial"
+      }
+    ]
+  },
+  "logistics": {
+    "datasets": [
+      {
+        "slug": "datasetengineer/logistics-vehicle-maintenance-history-dataset",
+        "file_glob": "*.csv",
+        "type": "logistics_delivery",
+        "max_rows": 200
+      }
+    ]
+  },
+  "financial": {
+    "datasets": [
+      {
+        "slug": "mirzayasirabdullah07/customer-support-tickets-dataset-200k-records",
+        "file_glob": "*.csv",
+        "type": "support_tickets",
+        "max_rows": 300,
+        "category_filter": ["Payment", "Refund", "Billing", "Insurance", "Account", "Security"]
+      },
+      {
+        "slug": "kaiwalyaatulraut/customer-support-tickets-dataset",
+        "file_glob": "*.csv",
+        "type": "support_tickets",
+        "max_rows": 100
+      }
+    ]
+  },
+  "construction": {
+    "datasets": [
+      {
+        "slug": "mirzayasirabdullah07/customer-support-tickets-dataset-200k-records",
+        "file_glob": "*.csv",
+        "type": "support_tickets",
+        "max_rows": 200,
+        "category_filter": ["Performance", "Feature", "Bug", "Installation"]
+      }
+    ]
+  },
+  "property": {
+    "datasets": [
+      {
+        "slug": "mirzayasirabdullah07/customer-support-tickets-dataset-200k-records",
+        "file_glob": "*.csv",
+        "type": "support_tickets",
+        "max_rows": 200,
+        "category_filter": ["Account", "Performance", "Data Sync", "Security"]
+      }
+    ]
+  }
+}

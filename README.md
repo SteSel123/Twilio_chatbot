@@ -79,6 +79,7 @@ Twilio_chatbot/
 │   ├── google_oauth.py       # Per-tenant Calendar OAuth
 │   ├── handoff.py            # Human escalation
 │   ├── industry_faqs.py      # Sector FAQ seeds for preview
+│   ├── kaggle_faqs.py        # Kaggle-derived FAQ merge layer
 │   ├── leads.py              # Lead qualification scoring
 │   ├── llm_tools.py          # OpenAI function-calling loop
 │   ├── mcp.py                # Tool registry + audit log
@@ -453,6 +454,7 @@ pytest tests/ -v
 | `test_commercial_tone.py` | 6 | Opening-hours phrasing and soft CTAs in preview |
 | `test_google_maps.py` | 6 | Places API formatting, weekday hours, agent context |
 | `test_industry_faqs.py` | 6 | Sector FAQ picker (restaurant, retail, salon, energy) |
+| `test_kaggle_faqs.py` | 4 | Kaggle FAQ merge for B2B verticals |
 | `test_landing_features.py` | 10 | Leads, tiers, analytics, calendar, outbound, MCP registry |
 | `test_mcp_tools.py` | 3 | Doc search, customer context, external integrations |
 | `test_onboarding.py` | 5 | Signup, tokens, demo requests, setup URL format |
@@ -464,6 +466,22 @@ pytest tests/ -v
 | `test_webhook_e2e.py` | 7 | Webhook TwiML, idempotency, agent consent + small talk |
 
 Shared fixtures: `tests/conftest.py`.
+
+### Kaggle sector FAQs (B2B verticals)
+
+For **industrial**, **construction**, **logistics**, **financial** and **property**, extra FAQ seeds come from `data/kaggle_faqs.json` (merged at runtime via `platform/kaggle_faqs.py`). The repo ships a curated snapshot so preview and signup seed docs work without Kaggle credentials.
+
+To refresh from Kaggle:
+
+```powershell
+pip install kaggle
+# Set KAGGLE_USERNAME + KAGGLE_KEY, or place ~/.kaggle/kaggle.json
+python scripts/kaggle_import.py
+python scripts/kaggle_import.py --vertical logistics
+python scripts/kaggle_import.py --dry-run
+```
+
+Dataset mapping lives in `data/kaggle_sources.json` (maintenance orders, fleet maintenance, customer-support tickets). Imported entries are deduped and capped per vertical; hand-curated entries in `data/kaggle_faqs.json` are kept when using `--merge` (default).
 
 ---
 
@@ -488,7 +506,8 @@ Copy `.env.example` to `.env`. Key groups:
 | **MCP** | `MCP_HOST`, `MCP_PORT`, `MCP_API_KEY`, `MCP_TRANSPORT` |
 | **Observability** | `SENTRY_DSN`, `APP_VERSION` |
 
-Optional: `AZURE_KEY_VAULT_URL` for secret resolution via `platform/secrets.py`.
+Optional: `AZURE_KEY_VAULT_URL` for secret resolution via `platform/secrets.py`.  
+Optional Kaggle import: `KAGGLE_USERNAME`, `KAGGLE_KEY` (or `~/.kaggle/kaggle.json`).
 
 ---
 
